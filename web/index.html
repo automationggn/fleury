@@ -2,10 +2,11 @@
 <html lang="en">
 <head>
   <script>
-  window.APP_CONFIG = {
-    API_BASE: "https://fleury-test-nodejs-01.azurewebsites.net"
-  };
-</script>
+    window.APP_CONFIG = {
+      API_BASE: "https://fleury-test-nodejs-01.azurewebsites.net"
+    };
+  </script>
+
   <meta charset="utf-8" />
   <title>TOTP Self‑Service Enrollment</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -68,216 +69,162 @@
 </head>
 
 <body>
-  <h1>TOTP Self‑Service Enrollment</h1>
+<h1>TOTP Self‑Service Enrollment</h1>
+<p class="muted">
+  Enroll Microsoft Authenticator using two consecutive TOTP codes.
+</p>
+
+<!-- 1. AUTH -->
+<div class="card">
+  <h2>1) Sign in</h2>
+  <div class="actions">
+    <a id="loginLink" href="/.auth/login/aad">Login</a>
+    <a id="logoutLink" href="/.auth/logout" style="display:none">Logout</a>
+    <span id="authState" class="muted">Checking…</span>
+  </div>
+
+  <div class="divider"></div>
+
+  <div><strong>User:</strong> <span id="userLine">—</span></div>
+  <div><strong>Roles:</strong> <span id="rolesLine">—</span></div>
+</div>
+
+<!-- 2. STATUS -->
+<div class="card">
+  <h2>2) Enrollment status</h2>
+  <div class="muted">
+    Status API not implemented. Enrollment is confirmed during verification.
+  </div>
+</div>
+
+<!-- 3. START ENROLLMENT -->
+<div class="card">
+  <h2>3) Start enrollment (QR)</h2>
   <p class="muted">
-    Enroll Microsoft Authenticator using two consecutive TOTP codes.
+    Scan the QR code using Microsoft Authenticator.
   </p>
 
-  <!-- 1. AUTH -->
-  <div class="card">
-    <h2>1) Sign in</h2>
-    <div class="actions">
-      <a id="loginLink" href="/.auth/login/aad">Login</a>
-      <a id="logoutLink" href="/.auth/logout" style="display:none">Logout</a>
-      <span id="authState" class="muted">Checking…</span>
-    </div>
+  <div class="actions">
+    <button class="primary" id="startEnrollBtn">Start / Re‑generate QR</button>
+    <span id="startEnrollMsg" class="muted"></span>
+  </div>
 
+  <div id="qrBlock" style="display:none">
     <div class="divider"></div>
-
-    <div><strong>User:</strong> <span id="userLine">—</span></div>
-    <div><strong>Roles:</strong> <span id="rolesLine">—</span></div>
-  </div>
-
-  <!-- 2. STATUS -->
-  <div class="card">
-    <h2>2) Enrollment status</h2>
-    <div class="actions">
-      <button id="refreshStatusBtn">Refresh</button>
-      <span id="statusPill">—</span>
-    </div>
-    <div id="statusMsg" class="muted" style="margin-top:8px;"></div>
-  </div>
-
-  <!-- 3. START ENROLLMENT -->
-  <div class="card">
-    <h2>3) Start enrollment (QR)</h2>
-    <p class="muted">
-      Scan the QR code using Microsoft Authenticator.
-    </p>
-
-    <div class="actions">
-      <button class="primary" id="startEnrollBtn">Start / Re‑generate QR</button>
-      <span id="startEnrollMsg" class="muted"></span>
-    </div>
-
-    <div id="qrBlock" style="display:none">
-      <div class="divider"></div>
-      <div class="row">
-        <img id="qrImg" class="qr" alt="QR code" />
-        <div style="flex:1">
-          <div><strong>Issuer:</strong> <span id="issuerLine">—</span></div>
-          <div class="muted">otpauth URI (do not share):</div>
-          <pre id="otpauthPre"></pre>
-        </div>
+    <div class="row">
+      <img id="qrImg" class="qr" alt="QR code" />
+      <div style="flex:1">
+        <div><strong>Issuer:</strong> <span id="issuerLine">—</span></div>
+        <div class="muted">otpauth URI (do not share):</div>
+        <pre id="otpauthPre"></pre>
       </div>
     </div>
   </div>
+</div>
 
-  <!-- 4. VERIFY -->
-  <div class="card">
-    <h2>4) Verify enrollment (two consecutive codes)</h2>
-    <p class="muted">
-      Enter the <strong>current</strong> code as Code 1.
-      Wait for the app to rotate, then enter the <strong>next</strong> code as Code 2.
-    </p>
+<!-- 4. VERIFY -->
+<div class="card">
+  <h2>4) Verify enrollment (two consecutive codes)</h2>
+  <p class="muted">
+    Enter the <strong>current</strong> code as Code 1, then the <strong>next</strong> code as Code 2.
+  </p>
 
-    <div class="actions">
-      <input id="code1Input" inputmode="numeric" maxlength="6" placeholder="Code 1" />
-      <input id="code2Input" inputmode="numeric" maxlength="6" placeholder="Code 2" />
-      <button class="primary" id="verifyBtn">Verify</button>
-    </div>
-
-    <div id="verifyMsg" class="muted" style="margin-top:8px;"></div>
+  <div class="actions">
+    <input id="code1Input" inputmode="numeric" maxlength="6" placeholder="Code 1" />
+    <input id="code2Input" inputmode="numeric" maxlength="6" placeholder="Code 2" />
+    <button class="primary" id="verifyBtn">Verify</button>
   </div>
 
-  <!-- ✅ MSAL Browser -->
-  <script
-    type="text/javascript"
-    src="https://alcdn.msauth.net/browser/2.38.2/js/msal-browser.min.js">
-  </script>
-
-  <!-- ✅ auth.js MUST load -->
-  <script src="./auth.js"></script>
-
-  <script>
-    function qrUrl(text) {
-      return "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=" +
-        encodeURIComponent(text);
-    }
-
-    async function getUserInfo() {
-      const res = await fetch("/.auth/me");
-      const data = await res.json();
-      return data.clientPrincipal || null;
-    }
-
-    function setAuthUI(user) {
-      const login = document.getElementById("loginLink");
-      const logout = document.getElementById("logoutLink");
-      document.getElementById("authState").textContent =
-        user ? "Authenticated" : "Anonymous";
-
-      if (user) {
-        login.style.display = "none";
-        logout.style.display = "inline";
-        document.getElementById("userLine").textContent = user.userDetails;
-        document.getElementById("rolesLine").textContent =
-          (user.userRoles || []).join(", ");
-      } else {
-        login.style.display = "inline";
-        logout.style.display = "none";
-      }
-    }
-
-    async function refreshStatus() {
-      const pill = document.getElementById("statusPill");
-      const msg = document.getElementById("statusMsg");
-      pill.textContent = "Loading…";
-
-      try {
-        const res = await fetch("/api/enroll/status");
-        const data = await res.json();
-        pill.textContent = data.status;
-
-        if (data.status === "Completed") {
-          msg.innerHTML = "<span class='ok'>Enrollment completed.</span>";
-        } else if (data.status === "Pending") {
-          msg.innerHTML = "<span class='warn'>Pending verification.</span>";
-        } else {
-          msg.textContent = "Not enrolled.";
-        }
-      } catch {
-        pill.textContent = "Error";
-        msg.innerHTML = "<span class='err'>Failed to load status.</span>";
-      }
-    }
-
-    async function startEnrollment() {
-      const msg = document.getElementById("startEnrollMsg");
-      const qrBlock = document.getElementById("qrBlock");
-      qrBlock.style.display = "none";
-      msg.textContent = "Starting…";
-
-      try {
-        const res = await fetch("/api/enroll/start", { method: "POST" });
-        const data = await res.json();
-
-        if (data.status === "Completed") {
-          msg.innerHTML = "<span class='ok'>Already enrolled.</span>";
-          await refreshStatus();
-          return;
-        }
-
-        document.getElementById("issuerLine").textContent = data.issuer;
-        document.getElementById("otpauthPre").textContent = data.otpauth;
-        document.getElementById("qrImg").src = qrUrl(data.otpauth);
-        qrBlock.style.display = "block";
-        msg.innerHTML = "<span class='ok'>QR generated.</span>";
-        await refreshStatus();
-      } catch {
-        msg.innerHTML = "<span class='err'>Failed to start enrollment.</span>";
-      }
-    }
-
-    async function verifyCode() {
-      const c1 = document.getElementById("code1Input").value.trim();
-      const c2 = document.getElementById("code2Input").value.trim();
-      const msg = document.getElementById("verifyMsg");
-
-      if (!/^\d{6}$/.test(c1) || !/^\d{6}$/.test(c2)) {
-        msg.innerHTML = "<span class='warn'>Enter two 6‑digit codes.</span>";
-        return;
-      }
-
-      msg.textContent = "Verifying…";
-
-      try {
-        const res = await fetch("/api/enroll/verify", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ code1: c1, code2: c2 })
-        });
-        const data = await res.json();
-
-        if (res.ok && data.valid) {
-          msg.innerHTML = "<span class='ok'>Enrollment verified.</span>";
-          document.getElementById("code1Input").value = "";
-          document.getElementById("code2Input").value = "";
-          await refreshStatus();
-        } else if (data.reason === "not_consecutive") {
-          msg.innerHTML =
-            "<span class='warn'>Codes must be consecutive.</span> Wait for the code to change.";
-        } else {
-          msg.innerHTML = "<span class='err'>Verification failed.</span>";
-        }
-      } catch {
-        msg.innerHTML = "<span class='err'>Verification failed.</span>";
-      }
-    }
-
-    document.getElementById("refreshStatusBtn").addEventListener("click", refreshStatus);
-    document.getElementById("startEnrollBtn").addEventListener("click", startEnrollment);
-    document.getElementById("verifyBtn").addEventListener("click", verifyCode);
-
-    (async () => {
-      const user = await getUserInfo();
-      setAuthUI(user);
-      await refreshStatus();
-    })();
-  </script>
+  <div id="verifyMsg" class="muted" style="margin-top:8px;"></div>
+</div>
 
 <script>
-  console.log("API BASE =", window.APP_CONFIG.API_BASE);
+  const API = window.APP_CONFIG.API_BASE;
+
+  function qrUrl(text) {
+    return "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=" +
+      encodeURIComponent(text);
+  }
+
+  async function getUserInfo() {
+    const res = await fetch("/.auth/me");
+    const data = await res.json();
+    return data.clientPrincipal || null;
+  }
+
+  function setAuthUI(user) {
+    document.getElementById("authState").textContent =
+      user ? "Authenticated" : "Anonymous";
+    document.getElementById("loginLink").style.display = user ? "none" : "inline";
+    document.getElementById("logoutLink").style.display = user ? "inline" : "none";
+    if (user) {
+      document.getElementById("userLine").textContent = user.userDetails;
+      document.getElementById("rolesLine").textContent =
+        (user.userRoles || []).join(", ");
+    }
+  }
+
+  async function startEnrollment() {
+    const msg = document.getElementById("startEnrollMsg");
+    const qrBlock = document.getElementById("qrBlock");
+    qrBlock.style.display = "none";
+    msg.textContent = "Starting…";
+
+    try {
+      const res = await fetch(`${API}/api/enroll`, { method: "POST" });
+      const data = await res.json();
+
+      document.getElementById("issuerLine").textContent = data.issuer || "Fleury";
+      document.getElementById("otpauthPre").textContent = data.otpauth;
+      document.getElementById("qrImg").src = qrUrl(data.otpauth);
+      qrBlock.style.display = "block";
+      msg.innerHTML = "<span class='ok'>QR generated.</span>";
+    } catch {
+      msg.innerHTML = "<span class='err'>Failed to start enrollment.</span>";
+    }
+  }
+
+  async function verifyCode() {
+    const c1 = code1Input.value.trim();
+    const c2 = code2Input.value.trim();
+    const msg = document.getElementById("verifyMsg");
+
+    if (!/^\d{6}$/.test(c1) || !/^\d{6}$/.test(c2)) {
+      msg.innerHTML = "<span class='warn'>Enter two 6‑digit codes.</span>";
+      return;
+    }
+
+    msg.textContent = "Verifying…";
+
+    try {
+      const res = await fetch(`${API}/api/verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code1: c1, code2: c2 })
+      });
+      const data = await res.json();
+
+      if (res.ok && data.valid) {
+        msg.innerHTML = "<span class='ok'>Enrollment verified.</span>";
+        code1Input.value = "";
+        code2Input.value = "";
+      } else {
+        msg.innerHTML = "<span class='err'>Verification failed.</span>";
+      }
+    } catch {
+      msg.innerHTML = "<span class='err'>Verification failed.</span>";
+    }
+  }
+
+  startEnrollBtn.onclick = startEnrollment;
+  verifyBtn.onclick = verifyCode;
+
+  (async () => {
+    const user = await getUserInfo();
+    setAuthUI(user);
+  })();
+
+  console.log("API BASE =", API);
 </script>
 
 </body>
