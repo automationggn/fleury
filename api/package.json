@@ -1,8 +1,10 @@
 {
   "name": "fleury-test-nodejs-01",
   "version": "1.0.0",
-  "main": "src/{index.js,functions/*.js}",
+  "main": "index.js",
   "dependencies": {
-    "@azure/functions": "^4.0.0"
+    "@azure/functions": "^4.0.0",
+    "@azure/identity": "^4.13.0",
+    "@azure/keyvault-secrets": "^4.10.0"
   }
 }
