@@ -8,7 +8,7 @@ function secretNameFor(employeeId) {
 
 app.http("verify", {
   methods: ["POST"],
-  authLevel: "FUNCTION",
+  authLevel: "anonymous",
   route: "verify",
   handler: async (request, context) => {
     const body = await request.json().catch(() => ({}));
