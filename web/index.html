@@ -118,7 +118,7 @@
     </div>
   </div>
 
-  <!-- 4. VERIFY (TWO CODES) -->
+  <!-- 4. VERIFY -->
   <div class="card">
     <h2>4) Verify enrollment (two consecutive codes)</h2>
     <p class="muted">
@@ -135,148 +135,140 @@
     <div id="verifyMsg" class="muted" style="margin-top:8px;"></div>
   </div>
 
-<script>
-  // ---------------------------
-  // Helpers
-  // ---------------------------
-  function qrUrl(text) {
-    return "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=" +
-           encodeURIComponent(text);
-  }
+  <!-- ✅ MSAL Browser -->
+  <script
+    type="text/javascript"
+    src="https://alcdn.msauth.net/browser/2.38.2/js/msal-browser.min.js">
+  </script>
 
-  async function getUserInfo() {
-    const res = await fetch("/.auth/me");
-    const data = await res.json();
-    return data.clientPrincipal || null;
-  }
+  <!-- ✅ auth.js MUST load -->
+  <script src="./auth.js"></script>
 
-  function setAuthUI(user) {
-    const login = document.getElementById("loginLink");
-    const logout = document.getElementById("logoutLink");
-    document.getElementById("authState").textContent =
-      user ? "Authenticated" : "Anonymous";
-
-    if (user) {
-      login.style.display = "none";
-      logout.style.display = "inline";
-      document.getElementById("userLine").textContent = user.userDetails;
-      document.getElementById("rolesLine").textContent =
-        (user.userRoles || []).join(", ");
-    } else {
-      login.style.display = "inline";
-      logout.style.display = "none";
+  <script>
+    function qrUrl(text) {
+      return "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=" +
+        encodeURIComponent(text);
     }
-  }
 
-  // ---------------------------
-  // Status
-  // ---------------------------
-  async function refreshStatus() {
-    const pill = document.getElementById("statusPill");
-    const msg = document.getElementById("statusMsg");
-    pill.textContent = "Loading…";
-
-    try {
-      const res = await fetch("/api/enroll/status");
+    async function getUserInfo() {
+      const res = await fetch("/.auth/me");
       const data = await res.json();
-      pill.textContent = data.status;
+      return data.clientPrincipal || null;
+    }
 
-      if (data.status === "Completed") {
-        msg.innerHTML = "<span class='ok'>Enrollment completed.</span>";
-      } else if (data.status === "Pending") {
-        msg.innerHTML = "<span class='warn'>Pending verification.</span>";
+    function setAuthUI(user) {
+      const login = document.getElementById("loginLink");
+      const logout = document.getElementById("logoutLink");
+      document.getElementById("authState").textContent =
+        user ? "Authenticated" : "Anonymous";
+
+      if (user) {
+        login.style.display = "none";
+        logout.style.display = "inline";
+        document.getElementById("userLine").textContent = user.userDetails;
+        document.getElementById("rolesLine").textContent =
+          (user.userRoles || []).join(", ");
       } else {
-        msg.textContent = "Not enrolled.";
+        login.style.display = "inline";
+        logout.style.display = "none";
       }
-    } catch {
-      pill.textContent = "Error";
-      msg.innerHTML = "<span class='err'>Failed to load status.</span>";
     }
-  }
 
-  // ---------------------------
-  // Start enrollment
-  // ---------------------------
-  async function startEnrollment() {
-    const msg = document.getElementById("startEnrollMsg");
-    const qrBlock = document.getElementById("qrBlock");
-    qrBlock.style.display = "none";
-    msg.textContent = "Starting…";
+    async function refreshStatus() {
+      const pill = document.getElementById("statusPill");
+      const msg = document.getElementById("statusMsg");
+      pill.textContent = "Loading…";
 
-    try {
-      const res = await fetch("/api/enroll/start", { method: "POST" });
-      const data = await res.json();
+      try {
+        const res = await fetch("/api/enroll/status");
+        const data = await res.json();
+        pill.textContent = data.status;
 
-      if (data.status === "Completed") {
-        msg.innerHTML = "<span class='ok'>Already enrolled.</span>";
+        if (data.status === "Completed") {
+          msg.innerHTML = "<span class='ok'>Enrollment completed.</span>";
+        } else if (data.status === "Pending") {
+          msg.innerHTML = "<span class='warn'>Pending verification.</span>";
+        } else {
+          msg.textContent = "Not enrolled.";
+        }
+      } catch {
+        pill.textContent = "Error";
+        msg.innerHTML = "<span class='err'>Failed to load status.</span>";
+      }
+    }
+
+    async function startEnrollment() {
+      const msg = document.getElementById("startEnrollMsg");
+      const qrBlock = document.getElementById("qrBlock");
+      qrBlock.style.display = "none";
+      msg.textContent = "Starting…";
+
+      try {
+        const res = await fetch("/api/enroll/start", { method: "POST" });
+        const data = await res.json();
+
+        if (data.status === "Completed") {
+          msg.innerHTML = "<span class='ok'>Already enrolled.</span>";
+          await refreshStatus();
+          return;
+        }
+
+        document.getElementById("issuerLine").textContent = data.issuer;
+        document.getElementById("otpauthPre").textContent = data.otpauth;
+        document.getElementById("qrImg").src = qrUrl(data.otpauth);
+        qrBlock.style.display = "block";
+        msg.innerHTML = "<span class='ok'>QR generated.</span>";
         await refreshStatus();
+      } catch {
+        msg.innerHTML = "<span class='err'>Failed to start enrollment.</span>";
+      }
+    }
+
+    async function verifyCode() {
+      const c1 = document.getElementById("code1Input").value.trim();
+      const c2 = document.getElementById("code2Input").value.trim();
+      const msg = document.getElementById("verifyMsg");
+
+      if (!/^\d{6}$/.test(c1) || !/^\d{6}$/.test(c2)) {
+        msg.innerHTML = "<span class='warn'>Enter two 6‑digit codes.</span>";
         return;
       }
 
-      document.getElementById("issuerLine").textContent = data.issuer;
-      document.getElementById("otpauthPre").textContent = data.otpauth;
-      document.getElementById("qrImg").src = qrUrl(data.otpauth);
-      qrBlock.style.display = "block";
-      msg.innerHTML = "<span class='ok'>QR generated.</span>";
-      await refreshStatus();
-    } catch {
-      msg.innerHTML = "<span class='err'>Failed to start enrollment.</span>";
-    }
-  }
+      msg.textContent = "Verifying…";
 
-  // ---------------------------
-  // Verify TWO consecutive codes
-  // ---------------------------
-  async function verifyCode() {
-    const c1 = document.getElementById("code1Input").value.trim();
-    const c2 = document.getElementById("code2Input").value.trim();
-    const msg = document.getElementById("verifyMsg");
+      try {
+        const res = await fetch("/api/enroll/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code1: c1, code2: c2 })
+        });
+        const data = await res.json();
 
-    if (!/^\d{6}$/.test(c1) || !/^\d{6}$/.test(c2)) {
-      msg.innerHTML = "<span class='warn'>Enter two 6‑digit codes.</span>";
-      return;
-    }
-
-    msg.textContent = "Verifying…";
-
-    try {
-      const res = await fetch("/api/enroll/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code1: c1, code2: c2 })
-      });
-      const data = await res.json();
-
-      if (res.ok && data.valid) {
-        msg.innerHTML = "<span class='ok'>Enrollment verified.</span>";
-        document.getElementById("code1Input").value = "";
-        document.getElementById("code2Input").value = "";
-        await refreshStatus();
-      } else if (data.reason === "not_consecutive") {
-        msg.innerHTML =
-          "<span class='warn'>Codes must be consecutive.</span> Wait for the code to change.";
-      } else {
+        if (res.ok && data.valid) {
+          msg.innerHTML = "<span class='ok'>Enrollment verified.</span>";
+          document.getElementById("code1Input").value = "";
+          document.getElementById("code2Input").value = "";
+          await refreshStatus();
+        } else if (data.reason === "not_consecutive") {
+          msg.innerHTML =
+            "<span class='warn'>Codes must be consecutive.</span> Wait for the code to change.";
+        } else {
+          msg.innerHTML = "<span class='err'>Verification failed.</span>";
+        }
+      } catch {
         msg.innerHTML = "<span class='err'>Verification failed.</span>";
       }
-    } catch {
-      msg.innerHTML = "<span class='err'>Verification failed.</span>";
     }
-  }
 
-  // ---------------------------
-  // Wire up
-  // ---------------------------
-  document.getElementById("refreshStatusBtn").addEventListener("click", refreshStatus);
-  document.getElementById("startEnrollBtn").addEventListener("click", startEnrollment);
-  document.getElementById("verifyBtn").addEventListener("click", verifyCode);
+    document.getElementById("refreshStatusBtn").addEventListener("click", refreshStatus);
+    document.getElementById("startEnrollBtn").addEventListener("click", startEnrollment);
+    document.getElementById("verifyBtn").addEventListener("click", verifyCode);
 
-  (async () => {
-    const user = await getUserInfo();
-    setAuthUI(user);
-    await refreshStatus();
-  })();
-</script>
-
+    (async () => {
+      const user = await getUserInfo();
+      setAuthUI(user);
+      await refreshStatus();
+    })();
+  </script>
 </body>
 </html>
-``
