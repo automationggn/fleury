@@ -6,3 +6,7 @@
 
 # Dependencies
 node_modules/
+
+# Azure Functions local settings
+local.settings.json
+api/local.settings.json
