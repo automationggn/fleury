@@ -5,7 +5,7 @@ const { generateSecretBase32, configureTotp } = require("../shared/totp");
 function secretNameFor(employeeId) {
   return `totp-seed-${employeeId}`;
 }
-
+//Trigger redeployment by simply commenting
 // IMPORTANT: set this to your SWA origin exactly
 const ALLOWED_ORIGIN = "https://icy-river-03e7fe80f.2.azurestaticapps.net";
 
