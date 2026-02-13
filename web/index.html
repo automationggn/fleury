@@ -202,11 +202,18 @@ async function startEnrollment() {
 
     const url = window.APP_CONFIG.API_BASE + "/api/enroll";
 
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ employeeId })
-    });
+    const payload = {
+  employeeId,
+  issuer: "FleuryPOC", //ISSUER NAME SHOWN IN AUTHENTICATOR APP
+  digits: 6,
+  period: 30
+};
+
+const res = await fetch(url, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(payload)
+});
 
     if (!res.ok) {
       const text = await res.text();
