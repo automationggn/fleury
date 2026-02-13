@@ -164,25 +164,54 @@
     }
   }
 
-  async function startEnrollment() {
-    const msg = document.getElementById("startEnrollMsg");
-    const qrBlock = document.getElementById("qrBlock");
-    qrBlock.style.display = "none";
-    msg.textContent = "Starting…";
+async function startEnrollment() {
+  const msg = document.getElementById("startEnrollMsg");
+  const qrBlock = document.getElementById("qrBlock");
+  qrBlock.style.display = "none";
+  msg.textContent = "Starting…";
 
-    try {
-      const res = await fetch(`${API}/api/enroll`, { method: "POST" });
-      const data = await res.json();
+  try {
+    const apiBase = window.APP_CONFIG.API_BASE;
+    const url = apiBase + "/api/enroll";
 
-      document.getElementById("issuerLine").textContent = data.issuer || "Fleury";
-      document.getElementById("otpauthPre").textContent = data.otpauth;
-      document.getElementById("qrImg").src = qrUrl(data.otpauth);
-      qrBlock.style.display = "block";
-      msg.innerHTML = "<span class='ok'>QR generated.</span>";
-    } catch {
-      msg.innerHTML = "<span class='err'>Failed to start enrollment.</span>";
+    // Call your fresh deployed function (POST /api/enroll)
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+
+      // Minimal body: include signed-in user identity if available.
+      // If your backend ignores it, that's fine. If it uses it, it's there.
+      body: JSON.stringify({
+        user: (await getUserInfo())?.userDetails || null
+      })
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      msg.innerHTML = `<span class='err'>Enroll failed: ${res.status} ${text}</span>`;
+      return;
     }
+
+    const data = await res.json();
+
+    // Expectation: enroll returns otpauth URI (what you need to generate QR)
+    if (!data?.otpauth) {
+      msg.innerHTML = "<span class='err'>Enroll response missing otpauth.</span>";
+      console.log("Enroll response:", data);
+      return;
+    }
+
+    document.getElementById("issuerLine").textContent = data.issuer || "—";
+    document.getElementById("otpauthPre").textContent = data.otpauth;
+    document.getElementById("qrImg").src = qrUrl(data.otpauth);
+
+    qrBlock.style.display = "block";
+    msg.innerHTML = "<span class='ok'>QR generated.</span>";
+  } catch (e) {
+    console.error(e);
+    msg.innerHTML = "<span class='err'>Failed to start enrollment.</span>";
   }
+}
 
   async function verifyCode() {
     const c1 = code1Input.value.trim();
