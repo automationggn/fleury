@@ -71,7 +71,7 @@
 <body>
 <h1>TOTP Self‑Service Enrollment</h1>
 <p class="muted">
-  Enroll Microsoft Authenticator using two consecutive TOTP codes.
+  Enroll Microsoft Authenticator using self registered TOTP codes.
 </p>
 
 <!-- 1. AUTH -->
@@ -88,6 +88,8 @@
   <div><strong>User:</strong> <span id="userLine">—</span></div>
   <div><strong>Roles:</strong> <span id="rolesLine">—</span></div>
 </div>
+
+
 
 <!-- 2. STATUS -->
 <div class="card">
@@ -142,6 +144,13 @@
 <script>
   const API = window.APP_CONFIG.API_BASE;
 
+
+  function emailToEmployeeId(email) {
+  return email.toLowerCase().replace(/[^a-z0-9]/g, "_");
+}
+
+
+
   function qrUrl(text) {
     return "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=" +
       encodeURIComponent(text);
@@ -179,6 +188,7 @@ async function startEnrollment() {
 
     // Use the same value you display under "User:"
     const email = user?.userDetails;
+    const employeeId = emailToEmployeeId(email);
 
     if (!email) {
       msg.innerHTML = "<span class='err'>No signed-in user found. Please login.</span>";
@@ -192,7 +202,7 @@ async function startEnrollment() {
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ employeeId: email })
+      body: JSON.stringify({ employeeId })
     });
 
     if (!res.ok) {
@@ -231,6 +241,7 @@ async function verifyCode() {
 
   const user = await getUserInfo();
   const email = user?.userDetails;
+  const employeeId = emailToEmployeeId(email);
 
   if (!email) {
     msg.innerHTML = "<span class='err'>No signed-in user found. Please login.</span>";
@@ -251,7 +262,7 @@ async function verifyCode() {
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ employeeId: email, otp })
+      body: JSON.stringify({ employeeId, otp })
     });
 
     const data = await res.json().catch(() => ({}));
