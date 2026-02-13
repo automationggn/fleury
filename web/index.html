@@ -105,9 +105,11 @@
   </p>
 
   <div class="actions">
-    <button class="primary" id="startEnrollBtn">Start / Re‑generate QR</button>
-    <span id="startEnrollMsg" class="muted"></span>
-  </div>
+  <input id="employeeIdInput" inputmode="numeric" maxlength="12" placeholder="Employee ID" />
+  <button class="primary" id="startEnrollBtn">Start / Re‑generate QR</button>
+  <span id="startEnrollMsg" class="muted"></span>
+</div>
+
 
   <div id="qrBlock" style="display:none">
     <div class="divider"></div>
@@ -167,23 +169,25 @@
 async function startEnrollment() {
   const msg = document.getElementById("startEnrollMsg");
   const qrBlock = document.getElementById("qrBlock");
+  const employeeId = document.getElementById("employeeIdInput").value.trim();
+
   qrBlock.style.display = "none";
+
+  if (!employeeId) {
+    msg.innerHTML = "<span class='warn'>Employee ID is required.</span>";
+    return;
+  }
+
   msg.textContent = "Starting…";
 
   try {
     const apiBase = window.APP_CONFIG.API_BASE;
     const url = apiBase + "/api/enroll";
 
-    // Call your fresh deployed function (POST /api/enroll)
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-
-      // Minimal body: include signed-in user identity if available.
-      // If your backend ignores it, that's fine. If it uses it, it's there.
-      body: JSON.stringify({
-        user: (await getUserInfo())?.userDetails || null
-      })
+      body: JSON.stringify({ employeeId })
     });
 
     if (!res.ok) {
@@ -194,7 +198,6 @@ async function startEnrollment() {
 
     const data = await res.json();
 
-    // Expectation: enroll returns otpauth URI (what you need to generate QR)
     if (!data?.otpauth) {
       msg.innerHTML = "<span class='err'>Enroll response missing otpauth.</span>";
       console.log("Enroll response:", data);
