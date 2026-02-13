@@ -126,7 +126,7 @@
 
 <!-- 4. VERIFY -->
 <div class="card">
-  <h2>4) Verify enrollment (two consecutive codes)</h2>
+  <h2>4) Verify enrollment</h2>
   <p class="muted">
   Enter the 6-digit code from your authenticator app for this Employee ID.
 </p>
@@ -245,19 +245,26 @@ async function startEnrollment() {
 
     const data = await res.json().catch(() => ({}));
 
-    if (res.ok && data.valid === true) {
+    const isSuccess = res.ok && (data.ok === true || data.valid === true);
+
+    if (isSuccess) {
       msg.innerHTML = "<span class='ok'>Enrollment verified.</span>";
       document.getElementById("otpInput").value = "";
+
+      // Optional: show backend step if present
+      if (typeof data.step !== "undefined") {
+        console.log("Verified step:", data.step);
+      }
     } else {
-      // Show backend error if provided
       const reason = data?.error || data?.reason || "Verification failed.";
       msg.innerHTML = `<span class='err'>${reason}</span>`;
+      console.log("Verify response:", data);
     }
   } catch (e) {
     console.error(e);
     msg.innerHTML = "<span class='err'>Verification failed (network/error).</span>";
   }
-} 
+}
 
   startEnrollBtn.onclick = startEnrollment;
   verifyBtn.onclick = verifyCode;
