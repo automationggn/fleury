@@ -145,8 +145,11 @@
   const API = window.APP_CONFIG.API_BASE;
 
 
-  function emailToEmployeeId(email) {
-  return email.toLowerCase().replace(/[^a-z0-9]/g, "_");
+  
+function emailToAlnumKey(email) {
+  // remove everything except letters+numbers
+  // md.adil.khan@domain.com -> mdadilkhandomaincom
+  return (email || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
 
@@ -175,7 +178,7 @@
   }
 
 
-  
+ 
 async function startEnrollment() {
   const msg = document.getElementById("startEnrollMsg");
   const qrBlock = document.getElementById("qrBlock");
@@ -183,22 +186,22 @@ async function startEnrollment() {
   msg.textContent = "Starting…";
 
   try {
-    // Get signed-in user from Static Web Apps auth
     const user = await getUserInfo();
-
-    // Use the same value you display under "User:"
-    const email = user?.userDetails;
-    const employeeId = emailToEmployeeId(email);
+    const email = user?.userDetails; // shown under "User:" on UI
 
     if (!email) {
-      msg.innerHTML = "<span class='err'>No signed-in user found. Please login.</span>";
+      msg.innerHTML = "<span class='err'>Not signed in. Please Login.</span>";
       return;
     }
 
-    const apiBase = window.APP_CONFIG.API_BASE;
-    const url = apiBase + "/api/enroll";
+    const employeeId = emailToAlnumKey(email);
+    if (!employeeId) {
+      msg.innerHTML = "<span class='err'>Unable to derive identifier from email.</span>";
+      return;
+    }
 
-    // Backend expects employeeId field; we pass email as the identifier
+    const url = window.APP_CONFIG.API_BASE + "/api/enroll";
+
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -224,7 +227,7 @@ async function startEnrollment() {
     document.getElementById("qrImg").src = qrUrl(data.otpauth);
 
     qrBlock.style.display = "block";
-    msg.innerHTML = "<span class='ok'>QR generated.</span>";
+    msg.innerHTML = `<span class='ok'>QR generated for ${email}.</span>`;
   } catch (e) {
     console.error(e);
     msg.innerHTML = "<span class='err'>Failed to start enrollment.</span>";
@@ -239,25 +242,29 @@ async function verifyCode() {
   const otp = document.getElementById("otpInput").value.trim();
   const msg = document.getElementById("verifyMsg");
 
-  const user = await getUserInfo();
-  const email = user?.userDetails;
-  const employeeId = emailToEmployeeId(email);
-
-  if (!email) {
-    msg.innerHTML = "<span class='err'>No signed-in user found. Please login.</span>";
+  if (!/^\d{6}$/.test(otp)) {
+    msg.innerHTML = "<span class='warn'>Enter a 6-digit OTP.</span>";
     return;
   }
 
-  if (!/^\d{6}$/.test(otp)) {
-    msg.innerHTML = "<span class='warn'>Enter a 6-digit OTP.</span>";
+  const user = await getUserInfo();
+  const email = user?.userDetails;
+
+  if (!email) {
+    msg.innerHTML = "<span class='err'>Not signed in. Please Login.</span>";
+    return;
+  }
+
+  const employeeId = emailToAlnumKey(email);
+  if (!employeeId) {
+    msg.innerHTML = "<span class='err'>Unable to derive identifier from email.</span>";
     return;
   }
 
   msg.textContent = "Verifying…";
 
   try {
-    const apiBase = window.APP_CONFIG.API_BASE;
-    const url = apiBase + "/api/verify";
+    const url = window.APP_CONFIG.API_BASE + "/api/verify";
 
     const res = await fetch(url, {
       method: "POST",
@@ -270,7 +277,7 @@ async function verifyCode() {
     const isSuccess = res.ok && (data.ok === true || data.valid === true);
 
     if (isSuccess) {
-      msg.innerHTML = "<span class='ok'>Enrollment verified.</span>";
+      msg.innerHTML = `<span class='ok'>Enrollment verified for ${email}.</span>`;
       document.getElementById("otpInput").value = "";
     } else {
       const reason = data?.error || data?.reason || "Verification failed.";
@@ -282,7 +289,6 @@ async function verifyCode() {
     msg.innerHTML = "<span class='err'>Verification failed (network/error).</span>";
   }
 }
-
 
 
 
