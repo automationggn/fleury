@@ -128,14 +128,14 @@
 <div class="card">
   <h2>4) Verify enrollment (two consecutive codes)</h2>
   <p class="muted">
-    Enter the <strong>current</strong> code as Code 1, then the <strong>next</strong> code as Code 2.
-  </p>
+  Enter the 6-digit code from your authenticator app for this Employee ID.
+</p>
 
-  <div class="actions">
-    <input id="code1Input" inputmode="numeric" maxlength="6" placeholder="Code 1" />
-    <input id="code2Input" inputmode="numeric" maxlength="6" placeholder="Code 2" />
-    <button class="primary" id="verifyBtn">Verify</button>
-  </div>
+
+<div class="actions">
+  <input id="otpInput" inputmode="numeric" maxlength="6" placeholder="6-digit OTP" />
+  <button class="primary" id="verifyBtn">Verify</button>
+</div>
 
   <div id="verifyMsg" class="muted" style="margin-top:8px;"></div>
 </div>
@@ -216,37 +216,48 @@ async function startEnrollment() {
   }
 }
 
-  async function verifyCode() {
-    const c1 = code1Input.value.trim();
-    const c2 = code2Input.value.trim();
-    const msg = document.getElementById("verifyMsg");
+ async function verifyCode() {
+  const employeeId = document.getElementById("employeeIdInput").value.trim();
+  const otp = document.getElementById("otpInput").value.trim();
+  const msg = document.getElementById("verifyMsg");
 
-    if (!/^\d{6}$/.test(c1) || !/^\d{6}$/.test(c2)) {
-      msg.innerHTML = "<span class='warn'>Enter two 6‑digit codes.</span>";
-      return;
-    }
-
-    msg.textContent = "Verifying…";
-
-    try {
-      const res = await fetch(`${API}/api/verify`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code1: c1, code2: c2 })
-      });
-      const data = await res.json();
-
-      if (res.ok && data.valid) {
-        msg.innerHTML = "<span class='ok'>Enrollment verified.</span>";
-        code1Input.value = "";
-        code2Input.value = "";
-      } else {
-        msg.innerHTML = "<span class='err'>Verification failed.</span>";
-      }
-    } catch {
-      msg.innerHTML = "<span class='err'>Verification failed.</span>";
-    }
+  if (!employeeId) {
+    msg.innerHTML = "<span class='warn'>Employee ID is required.</span>";
+    return;
   }
+
+  if (!/^\d{6}$/.test(otp)) {
+    msg.innerHTML = "<span class='warn'>Enter a 6-digit OTP.</span>";
+    return;
+  }
+
+  msg.textContent = "Verifying…";
+
+  try {
+    const apiBase = window.APP_CONFIG.API_BASE;
+    const url = apiBase + "/api/verify";
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ employeeId, otp })
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (res.ok && data.valid === true) {
+      msg.innerHTML = "<span class='ok'>Enrollment verified.</span>";
+      document.getElementById("otpInput").value = "";
+    } else {
+      // Show backend error if provided
+      const reason = data?.error || data?.reason || "Verification failed.";
+      msg.innerHTML = `<span class='err'>${reason}</span>`;
+    }
+  } catch (e) {
+    console.error(e);
+    msg.innerHTML = "<span class='err'>Verification failed (network/error).</span>";
+  }
+} 
 
   startEnrollBtn.onclick = startEnrollment;
   verifyBtn.onclick = verifyCode;
