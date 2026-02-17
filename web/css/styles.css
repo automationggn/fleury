@@ -554,3 +554,26 @@ input {
   .flow-enabled .flow-step::before { left: -28px; }
   .flow-enabled .flow-step::after  { left: -22px; }
 }
+/* === Dropdown email overflow fix (keep inside menu) === */
+.ddHeader {
+  min-width: 0;               /* allow children to shrink */
+}
+
+.ddHeader > div:last-child {
+  min-width: 0;               /* important for ellipsis in flex layouts */
+  flex: 1 1 auto;
+}
+
+.ddEmail {
+  display: block;             /* ensure ellipsis applies */
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  word-break: keep-all;
+}
+
+/* Optional: prevent dropdown from getting too wide on small screens */
+.dropdown {
+  max-width: calc(100vw - 24px - env(safe-area-inset-left) - env(safe-area-inset-right));
+}
