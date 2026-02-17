@@ -5,48 +5,46 @@
   <title>TOTP Self‑Service Enrollment</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- App config kept inline (safe + minimal) -->
   <script>
     window.APP_CONFIG = {
       API_BASE: "https://fleury-test-nodejs-01.azurewebsites.net"
     };
   </script>
 
-  <!-- Styles -->
   <link rel="stylesheet" href="./css/styles.css" />
 </head>
 
 <body>
   <div class="app">
 
-    <!-- TOP HEADER: org left, profile right -->
+    <!-- Top bar -->
     <div class="topbar">
-      <div class="orgBadge" title="Organization">
-        <span class="orgDot" aria-hidden="true"></span>
+      <div class="orgBadge">
+        <span class="orgDot"></span>
         <span id="orgNameText">—</span>
       </div>
 
       <div class="userMenu">
         <span id="authState" class="authPill">Checking…</span>
 
-        <button id="avatarBtn" class="avatarBtn" aria-label="User menu" title="User menu" type="button">
+        <button id="avatarBtn" class="avatarBtn" type="button">
           <div id="avatarCircle" class="avatarCircle">?</div>
         </button>
 
-        <div id="userDropdown" class="dropdown" role="menu" aria-label="User menu">
+        <div id="userDropdown" class="dropdown">
           <div class="ddHeader">
-            <div class="avatarCircle avatarCircleMini" id="avatarCircleMini">?</div>
+            <div id="avatarCircleMini" class="avatarCircle avatarCircleMini">?</div>
             <div>
-              <div class="ddEmail" id="ddEmail">—</div>
-              <div class="ddMuted">Signed in via Azure Static Web Apps</div>
+              <div id="ddEmail" class="ddEmail">—</div>
+              <div class="ddMuted">Signed in</div>
             </div>
           </div>
 
           <div class="ddDivider"></div>
 
-          <a class="ddItem" id="msProfileLink" href="https://myaccount.microsoft.com/" target="_blank" rel="noopener">
+          <a class="ddItem" id="msProfileLink" href="https://myaccount.microsoft.com/" target="_blank">
             <div class="ddIcon">👤</div>
-            <div>Open Microsoft profile</div>
+            <div>Microsoft profile</div>
           </a>
 
           <a class="ddItem" id="logoutLink" href="/.auth/logout">
@@ -54,9 +52,7 @@
             <div>Logout</div>
           </a>
 
-          <div class="ddDivider"></div>
-
-          <a class="ddItem ddHidden" id="loginLink" href="/.auth/login/aad">
+          <a class="ddItem" id="loginLink" href="/.auth/login/aad">
             <div class="ddIcon">🔐</div>
             <div>Login</div>
           </a>
@@ -64,75 +60,94 @@
       </div>
     </div>
 
-    <!-- TITLE CARD -->
-    <div class="card">
+    <!-- Title -->
+    <div class="card center">
       <h1 class="pageTitle">TOTP Self‑Service Enrollment</h1>
-      <p class="pageSubtitle">Enroll Microsoft Authenticator using self‑registered TOTP codes.</p>
+      <p class="pageSubtitle">Microsoft Authenticator enrollment</p>
     </div>
 
-    <!-- 1. AUTH -->
-    <div class="card">
-      <h2>1) Sign in</h2>
-      <div class="actions">
-        <a id="loginLinkInline" href="/.auth/login/aad">Login</a>
-        <a id="logoutLinkInline" class="inlineHidden" href="/.auth/logout">Logout</a>
-        <span class="muted">Use the avatar menu on the top-right for quick actions.</span>
+    <!-- Sign in -->
+    <div class="card center">
+      <h2>Sign in</h2>
+
+      <div class="actions center">
+        <a id="loginLinkInline" class="btnLike primary" href="/.auth/login/aad">Login</a>
+        <a id="logoutLinkInline" class="btnLike primary" href="/.auth/logout">Logout</a>
       </div>
 
       <div class="divider"></div>
 
       <div><strong>User:</strong> <span id="userLine">—</span></div>
-      <div><strong>Roles:</strong> <span id="rolesLine">—</span></div>
     </div>
 
-    <!-- 2. STATUS -->
-    <div class="card">
-      <h2>2) Enrollment status</h2>
-      <div class="muted">
-        Status API not implemented. Enrollment is confirmed during verification.
+    <!-- Status -->
+    <div class="card center">
+      <h2>Enrollment status</h2>
+
+      <div id="enrollmentStatusText" class="muted">
+        Checking status…
+      </div>
+
+      <div class="statusToolsBar center">
+        <button id="refreshStatusBtn" class="primary miniBtn">Refresh status</button>
+        <span id="lastCheckedText" class="statusToolsMuted">Last checked: —</span>
       </div>
     </div>
 
-    <!-- 3. ENROLL -->
-    <div class="card">
-      <h2>3) Start enrollment (QR)</h2>
-      <p class="muted">Scan the QR code using Microsoft Authenticator.</p>
+    <!-- Enroll -->
+    <div class="card center">
+      <h2>Start enrollment</h2>
 
-      <div class="actions">
-        <button class="primary" id="startEnrollBtn" type="button">Start / Re‑generate QR</button>
-        <span id="startEnrollMsg" class="muted"></span>
+      <p class="muted">
+        Scan the QR code using Microsoft Authenticator.
+      </p>
+
+      <div class="actions center">
+        <button id="startEnrollBtn" class="primary">Start / Re‑generate QR</button>
       </div>
 
       <div id="qrBlock" class="qrBlock is-hidden">
         <div class="divider"></div>
-
-        <div class="row">
-          <img id="qrImg" class="qr" alt="QR code" />
-          <div class="qrMeta">
-            <div><strong>Issuer:</strong> <span id="issuerLine">—</span></div>
-            <div class="muted">otpauth URI (do not share):</div>
-            <pre id="otpauthPre"></pre>
-          </div>
-        </div>
+        <img id="qrImg" class="qr" alt="QR code" />
       </div>
     </div>
 
-    <!-- 4. VERIFY -->
-    <div class="card">
-      <h2>4) Verify enrollment</h2>
-      <p class="muted">Enter the 6‑digit code from your authenticator app.</p>
+    <!-- Verify -->
+    <div class="card center">
+      <h2>Verify</h2>
 
-      <div class="actions">
-        <input id="otpInput" inputmode="numeric" maxlength="6" placeholder="6‑digit OTP" />
-        <button class="primary" id="verifyBtn" type="button">Verify</button>
+      <p class="muted">
+        Enter the 6‑digit code from your authenticator app.
+      </p>
+
+      <div class="actions center">
+        <input id="otpInput" maxlength="6" placeholder="6‑digit OTP" inputmode="numeric" />
+        <button id="verifyBtn" class="primary">Verify</button>
       </div>
-
-      <div id="verifyMsg" class="muted verifyMsg"></div>
     </div>
 
   </div>
 
-  <!-- App script -->
-  <script defer src="./js/app.js"></script>
+  <!-- Toast -->
+  <div id="toastHost" class="toastHost"></div>
+
+  <!-- Modal -->
+  <div id="confirmModal" class="modalOverlay">
+    <div class="modalDialog">
+      <div class="modalHeader">
+        <div class="modalIcon">⚠️</div>
+        <h3 id="modalTitle">Confirm</h3>
+      </div>
+      <div class="modalBody">
+        <p id="modalMessage"></p>
+      </div>
+      <div class="modalActions">
+        <button id="modalCancelBtn" class="btnGhost">Cancel</button>
+        <button id="modalConfirmBtn" class="btnDanger">Continue</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="./js/app.js"></script>
 </body>
 </html>
