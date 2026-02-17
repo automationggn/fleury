@@ -487,3 +487,63 @@ input {
     border-radius: 16px;
   }
 }
+/* =========================================================
+   OPTIONAL VISUAL FLOW (SAFE, ADDITIVE)
+   Enable by adding .flow-enabled to .app
+========================================================= */
+
+.flow-enabled {
+  position: relative;
+}
+
+/* Vertical flow line */
+.flow-enabled::before {
+  content: "";
+  position: absolute;
+  top: 180px;               /* starts below title card */
+  left: 18px;
+  bottom: 32px;
+  width: 2px;
+  background: var(--border);
+}
+
+/* Cards participate in flow */
+.flow-enabled .card {
+  position: relative;
+  margin-left: 36px;        /* creates space for line */
+}
+
+/* Flow step dot */
+.flow-enabled .card::before {
+  content: "";
+  position: absolute;
+  left: -36px;
+  top: 22px;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--primary);
+  box-shadow: 0 0 0 4px var(--bg-page);
+}
+
+/* Title card does NOT get a dot */
+.flow-enabled .card:first-of-type::before {
+  display: none;
+}
+
+/* =========================================================
+   MOBILE SAFETY
+========================================================= */
+@media (max-width: 480px) {
+  .flow-enabled::before {
+    left: 12px;
+  }
+
+  .flow-enabled .card {
+    margin-left: 28px;
+  }
+
+  .flow-enabled .card::before {
+    left: -28px;
+  }
+}
