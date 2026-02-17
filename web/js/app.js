@@ -9,12 +9,6 @@
   let isEnrollBusy = false;
   let isVerifyBusy = false;
 
-  // ✅ Local override: when user re-enrolls (new seed), force pending until verified
-  let pendingOverride = {
-    employeeId: null,
-    untilMs: 0
-  };
-
   // -----------------------------
   // Helpers
   // -----------------------------
@@ -62,26 +56,145 @@
     }
   }
 
-  function now() {
-    return Date.now();
+  // -----------------------------
+  // Toasts (Step 1)
+  // -----------------------------
+  function ensureToastStyles() {
+    if (document.getElementById("totpToastStyles")) return;
+
+    const style = document.createElement("style");
+    style.id = "totpToastStyles";
+    style.textContent = `
+      .toastHost {
+        position: fixed;
+        top: 16px;
+        right: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 10000;
+        pointer-events: none;
+      }
+
+      .toast {
+        width: min(360px, calc(100vw - 32px));
+        background: #fff;
+        border: 1px solid var(--border, #e5e7eb);
+        border-radius: 12px;
+        box-shadow: 0 16px 40px rgba(0,0,0,0.14);
+        padding: 12px 12px;
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        pointer-events: auto;
+        transform: translateY(-6px);
+        opacity: 0;
+        transition: opacity 140ms ease, transform 140ms ease;
+      }
+
+      .toast.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .toastIcon {
+        width: 28px;
+        height: 28px;
+        border-radius: 10px;
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+        font-size: 14px;
+      }
+
+      .toastBody {
+        flex: 1 1 auto;
+        min-width: 0;
+      }
+
+      .toastTitle {
+        margin: 0;
+        font-size: 13px;
+        font-weight: 800;
+        color: var(--text-main, #111827);
+      }
+
+      .toastMsg {
+        margin: 2px 0 0 0;
+        font-size: 12px;
+        color: var(--text-muted, #6b7280);
+        line-height: 1.35;
+        word-break: break-word;
+      }
+
+      .toastClose {
+        border: 0;
+        background: transparent;
+        cursor: pointer;
+        color: #9ca3af;
+        font-size: 16px;
+        padding: 2px 6px;
+        margin-left: 4px;
+      }
+      .toastClose:hover { color: #6b7280; }
+
+      .toast.success .toastIcon { background: var(--success-bg, #ecfdf5); color: var(--success-text, #047857); }
+      .toast.warn    .toastIcon { background: var(--warn-bg, #fffbeb); color: var(--warn-text, #b45309); }
+      .toast.error   .toastIcon { background: var(--err-bg, #fef2f2); color: var(--err-text, #b91c1c); }
+      .toast.info    .toastIcon { background: #eff6ff; color: #1d4ed8; }
+    `;
+    document.head.appendChild(style);
   }
 
-  function isPendingOverrideActive(employeeId) {
-    return (
-      employeeId &&
-      pendingOverride.employeeId === employeeId &&
-      pendingOverride.untilMs > now()
-    );
+  function ensureToastHost() {
+    ensureToastStyles();
+    let host = document.getElementById("toastHost");
+    if (!host) {
+      host = document.createElement("div");
+      host.id = "toastHost";
+      host.className = "toastHost";
+      document.body.appendChild(host);
+    }
+    return host;
   }
 
-  function setPendingOverride(employeeId, minutes = 10) {
-    pendingOverride.employeeId = employeeId;
-    pendingOverride.untilMs = now() + minutes * 60 * 1000;
-  }
+  function showToast(type, title, message, ttlMs = 4500) {
+    const host = ensureToastHost();
 
-  function clearPendingOverride() {
-    pendingOverride.employeeId = null;
-    pendingOverride.untilMs = 0;
+    const iconByType = {
+      success: "✅",
+      warn: "⚠️",
+      error: "⛔",
+      info: "ℹ️"
+    };
+
+    const toast = document.createElement("div");
+    toast.className = `toast ${type || "info"}`;
+    toast.innerHTML = `
+      <div class="toastIcon" aria-hidden="true">${iconByType[type] || "ℹ️"}</div>
+      <div class="toastBody">
+        <p class="toastTitle"></p>
+        <p class="toastMsg"></p>
+      </div>
+      <button class="toastClose" type="button" aria-label="Close">×</button>
+    `;
+
+    toast.querySelector(".toastTitle").textContent = title || "Notice";
+    toast.querySelector(".toastMsg").textContent = message || "";
+    toast.querySelector(".toastClose").addEventListener("click", () => toast.remove());
+
+    host.appendChild(toast);
+
+    // animate in
+    requestAnimationFrame(() => toast.classList.add("show"));
+
+    // auto-dismiss
+    if (ttlMs > 0) {
+      setTimeout(() => {
+        toast.classList.remove("show");
+        setTimeout(() => toast.remove(), 160);
+      }, ttlMs);
+    }
   }
 
   // -----------------------------
@@ -134,7 +247,7 @@
   });
 
   // -----------------------------
-  // Modal (Step 8)
+  // Modal (Re-enroll confirm)
   // -----------------------------
   function ensureModalStyles() {
     if (document.getElementById("totpModalStyles")) return;
@@ -332,26 +445,98 @@
   }
 
   // -----------------------------
-  // Status UI + Button state (Step 9)
+  // Status UI + Refresh link + Last checked (Step 2)
   // -----------------------------
-  function findStatusMessageElement() {
+  function ensureStatusTools() {
     const headings = Array.from(document.querySelectorAll("h2"));
     const statusH2 = headings.find(
       (h) => (h.textContent || "").trim().toLowerCase() === "2) enrollment status"
     );
     if (!statusH2) return null;
+
     const card = statusH2.closest(".card");
-    return card ? card.querySelector(".muted") : null;
+    if (!card) return null;
+
+    // Find the existing muted text block
+    const msgEl = card.querySelector(".muted");
+    if (!msgEl) return null;
+
+    // Create tools bar once
+    let tools = card.querySelector("#statusToolsBar");
+    if (!tools) {
+      const styleId = "statusToolsStyles";
+      if (!document.getElementById(styleId)) {
+        const style = document.createElement("style");
+        style.id = styleId;
+        style.textContent = `
+          .statusToolsBar {
+            margin-top: 10px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+            font-size: 12px;
+          }
+          .statusToolsBar a {
+            color: var(--primary, #2563eb);
+            text-decoration: none;
+            font-weight: 600;
+          }
+          .statusToolsBar a:hover { text-decoration: underline; }
+          .statusToolsMuted {
+            color: var(--text-muted, #6b7280);
+          }
+        `;
+        document.head.appendChild(style);
+      }
+
+      tools = document.createElement("div");
+      tools.id = "statusToolsBar";
+      tools.className = "statusToolsBar";
+
+      tools.innerHTML = `
+        <a href="#" id="refreshStatusLink">Refresh status</a>
+        <span class="statusToolsMuted" id="lastCheckedText">Last checked: —</span>
+      `;
+
+      msgEl.insertAdjacentElement("afterend", tools);
+
+      // Hook refresh click
+      tools.querySelector("#refreshStatusLink").addEventListener("click", async (e) => {
+        e.preventDefault();
+        if (!lastKnownUser?.userDetails) {
+          showToast("warn", "Login required", "Sign in to refresh enrollment status.");
+          return;
+        }
+        showToast("info", "Refreshing", "Fetching latest enrollment status…", 2200);
+        await refreshStatus(lastKnownUser, { showToastOnSuccess: true });
+      });
+    }
+
+    return {
+      card,
+      msgEl,
+      tools,
+      lastCheckedEl: card.querySelector("#lastCheckedText")
+    };
   }
 
-  function setStatusUI({ state, issuer, enrolledAt, detail, overrideNote }) {
-    const el = findStatusMessageElement();
+  function updateLastChecked(ts = new Date()) {
+    const tools = ensureStatusTools();
+    if (!tools?.lastCheckedEl) return;
+    tools.lastCheckedEl.textContent = `Last checked: ${ts.toLocaleString()}`;
+  }
+
+  function setStatusUI({ state, issuer, enrolledAt, detail }) {
+    const tools = ensureStatusTools();
+    const el = tools?.msgEl;
     if (!el) return;
 
     if (state === "loading") {
       el.textContent = "Checking status…";
       return;
     }
+
     if (state === "anonymous") {
       el.innerHTML =
         "<span class='warn'>Login required</span> <span class='muted'>Sign in to view enrollment status.</span>";
@@ -381,11 +566,6 @@
       parts.push(`<span class='muted'>Issuer: ${issuer}</span>`);
     }
 
-    // ✅ show note when we override server-enrolled -> pending after re-enroll
-    if (overrideNote) {
-      parts.push(`<span class='muted'>(${overrideNote})</span>`);
-    }
-
     el.innerHTML = parts.join(" ");
   }
 
@@ -399,6 +579,9 @@
     return await res.json().catch(() => ({}));
   }
 
+  // -----------------------------
+  // Buttons state (Step 9 stays)
+  // -----------------------------
   function setButtonsState({ user, status }) {
     const startBtn = document.getElementById("startEnrollBtn");
     const verifyBtn = document.getElementById("verifyBtn");
@@ -421,12 +604,18 @@
     }
   }
 
-  async function refreshStatus(user) {
+  // -----------------------------
+  // Refresh status (now updates last-checked)
+  // -----------------------------
+  async function refreshStatus(user, opts = {}) {
     try {
+      ensureStatusTools();
+
       if (!API) {
         lastKnownStatus = null;
         setStatusUI({ state: "error", detail: "API_BASE is not configured." });
         setButtonsState({ user, status: lastKnownStatus });
+        updateLastChecked();
         return;
       }
 
@@ -434,6 +623,7 @@
         lastKnownStatus = null;
         setStatusUI({ state: "anonymous" });
         setButtonsState({ user, status: lastKnownStatus });
+        updateLastChecked();
         return;
       }
 
@@ -442,35 +632,16 @@
         lastKnownStatus = null;
         setStatusUI({ state: "error", detail: "Unable to derive employeeId from email." });
         setButtonsState({ user, status: lastKnownStatus });
+        updateLastChecked();
         return;
       }
 
       setStatusUI({ state: "loading" });
 
       const data = await fetchEnrollmentStatus(employeeId);
-      let status = (data?.status || "").toLowerCase();
+      const status = (data?.status || "").toLowerCase();
       const issuer = data?.issuer || null;
       const enrolledAt = data?.enrolledAt || null;
-
-      // ✅ If we just re-enrolled, force pending even if server still says enrolled
-      const overrideActive = isPendingOverrideActive(employeeId);
-      if (overrideActive && status === "enrolled") {
-        status = "pending";
-        lastKnownStatus = "pending";
-        setStatusUI({
-          state: "pending",
-          issuer,
-          enrolledAt: null,
-          overrideNote: "awaiting verification of newly generated QR"
-        });
-        setButtonsState({ user, status: lastKnownStatus });
-        return;
-      }
-
-      // If server starts returning pending, clear override
-      if (overrideActive && status === "pending") {
-        clearPendingOverride();
-      }
 
       if (status === "not_enrolled" || status === "pending" || status === "enrolled") {
         lastKnownStatus = status;
@@ -494,46 +665,70 @@
       }
 
       setButtonsState({ user, status: lastKnownStatus });
+      updateLastChecked();
+
+      if (opts.showToastOnSuccess) {
+        showToast("success", "Status refreshed", `Current status: ${lastKnownStatus || "unknown"}`, 2400);
+      }
     } catch (e) {
       console.error("refreshStatus error:", e);
       lastKnownStatus = null;
       setStatusUI({ state: "error", detail: e?.message || "Unknown error" });
       setButtonsState({ user, status: lastKnownStatus });
+      updateLastChecked();
+      showToast("error", "Status error", e?.message || "Failed to refresh status.");
     }
   }
 
   // -----------------------------
-  // Enrollment + Verification
+  // Enrollment + Verification (toast-based messages)
   // -----------------------------
+  function clearInlineMessages() {
+    const startEnrollMsg = document.getElementById("startEnrollMsg");
+    const verifyMsg = document.getElementById("verifyMsg");
+    if (startEnrollMsg) startEnrollMsg.textContent = "";
+    if (verifyMsg) verifyMsg.textContent = "";
+  }
+
   async function startEnrollment() {
-    const msg = document.getElementById("startEnrollMsg");
-    const qrBlock = document.getElementById("qrBlock");
     if (isEnrollBusy) return;
+
+    clearInlineMessages();
 
     const user = await getUserInfo();
     lastKnownUser = user;
 
     const email = user?.userDetails;
     if (!email) {
-      msg.innerHTML = "<span class='err'>Not signed in. Please Login.</span>";
+      showToast("warn", "Login required", "Please sign in before generating a QR code.");
       await refreshStatus(user);
       return;
     }
 
     const employeeId = emailToAlnumKey(email);
+    if (!employeeId) {
+      showToast("error", "Cannot enroll", "Unable to derive identifier from your email.");
+      return;
+    }
 
-    // Modal confirm if enrolled
+    // Re-enroll confirm if enrolled
     const allowed = await confirmReEnrollIfNeeded();
     if (!allowed) {
-      msg.innerHTML = "<span class='warn'>Re-enroll cancelled. Existing enrollment is unchanged.</span>";
+      showToast("info", "Cancelled", "Re-enroll cancelled. Existing enrollment unchanged.", 2600);
       return;
     }
 
     isEnrollBusy = true;
     setButtonsState({ user: lastKnownUser, status: lastKnownStatus });
 
+    const startBtn = document.getElementById("startEnrollBtn");
+    const originalLabel = startBtn.textContent;
+    startBtn.textContent = "Generating…";
+
+    const qrBlock = document.getElementById("qrBlock");
     qrBlock.classList.add("is-hidden");
-    msg.textContent = "Starting…";
+
+    showToast("info", "Generating QR", "Requesting a new enrollment QR code…", 2200);
 
     try {
       const url = API + "/api/enroll";
@@ -551,16 +746,15 @@
       });
 
       if (!res.ok) {
-        const text = await res.text();
-        msg.innerHTML = `<span class='err'>Enroll failed: ${res.status} ${text}</span>`;
+        const text = await res.text().catch(() => "");
+        showToast("error", "Enroll failed", `HTTP ${res.status} ${text}`.trim(), 6000);
         await refreshStatus(user);
         return;
       }
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!data?.otpauth) {
-        msg.innerHTML = "<span class='err'>Enroll response missing otpauth.</span>";
-        console.log("Enroll response:", data);
+        showToast("error", "Enroll failed", "Enroll response missing otpauth.", 6000);
         await refreshStatus(user);
         return;
       }
@@ -568,68 +762,75 @@
       document.getElementById("issuerLine").textContent = data.issuer || "—";
       document.getElementById("otpauthPre").textContent = data.otpauth;
       document.getElementById("qrImg").src = qrUrl(data.otpauth);
-
       qrBlock.classList.remove("is-hidden");
 
-      // ✅ Immediately force pending UX after enroll (reseed requires verification)
-      setPendingOverride(employeeId, 10);
-      lastKnownStatus = "pending";
-      setStatusUI({
-        state: "pending",
-        issuer: "FleuryTOTP",
-        enrolledAt: null,
-        overrideNote: "awaiting verification of newly generated QR"
-      });
-      setButtonsState({ user, status: lastKnownStatus });
+      showToast(
+        "success",
+        lastKnownStatus === "enrolled" ? "New QR generated" : "QR generated",
+        "Scan the QR in Microsoft Authenticator, then verify with a 6-digit OTP.",
+        5200
+      );
 
-      msg.innerHTML = `<span class='ok'>QR generated for ${email}. Please verify to complete enrollment.</span>`;
-
-      // Refresh (will keep pending if server incorrectly reports enrolled)
+      // Status should now be pending (backend fix). Refresh it.
       await refreshStatus(user);
     } catch (e) {
       console.error(e);
-      msg.innerHTML = "<span class='err'>Failed to start enrollment.</span>";
+      showToast("error", "Enroll error", "Failed to start enrollment (network/error).", 6000);
     } finally {
       isEnrollBusy = false;
+      startBtn.textContent = originalLabel; // refreshStatus will set proper label anyway
       setButtonsState({ user: lastKnownUser, status: lastKnownStatus });
     }
   }
 
   async function verifyCode() {
-    const otpInput = document.getElementById("otpInput");
-    const otp = otpInput.value.trim();
-    const msg = document.getElementById("verifyMsg");
     if (isVerifyBusy) return;
 
-    // Guard
+    clearInlineMessages();
+
     if (lastKnownStatus !== "pending") {
-      msg.innerHTML = "<span class='warn'>No pending enrollment to verify. Generate a QR first.</span>";
+      showToast("warn", "Nothing to verify", "Generate a QR first, then verify the OTP.", 4200);
       return;
     }
 
+    const otpInput = document.getElementById("otpInput");
+    const otp = otpInput.value.trim();
+
     if (!/^\d{6}$/.test(otp)) {
-      msg.innerHTML = "<span class='warn'>Enter a 6-digit OTP.</span>";
+      showToast("warn", "Invalid OTP", "Enter a valid 6-digit OTP.", 4200);
       return;
     }
 
     isVerifyBusy = true;
     setButtonsState({ user: lastKnownUser, status: lastKnownStatus });
 
+    const verifyBtn = document.getElementById("verifyBtn");
+    const originalLabel = verifyBtn.textContent;
+    verifyBtn.textContent = "Verifying…";
+
     const user = await getUserInfo();
     lastKnownUser = user;
 
     const email = user?.userDetails;
     if (!email) {
-      msg.innerHTML = "<span class='err'>Not signed in. Please Login.</span>";
+      showToast("warn", "Login required", "Please sign in before verifying OTP.");
       await refreshStatus(user);
       isVerifyBusy = false;
+      verifyBtn.textContent = originalLabel;
       setButtonsState({ user: lastKnownUser, status: lastKnownStatus });
       return;
     }
 
     const employeeId = emailToAlnumKey(email);
+    if (!employeeId) {
+      showToast("error", "Verify failed", "Unable to derive identifier from your email.");
+      isVerifyBusy = false;
+      verifyBtn.textContent = originalLabel;
+      setButtonsState({ user: lastKnownUser, status: lastKnownStatus });
+      return;
+    }
 
-    msg.textContent = "Verifying…";
+    showToast("info", "Verifying", "Validating the OTP…", 2000);
 
     try {
       const url = API + "/api/verify";
@@ -643,23 +844,21 @@
       const isSuccess = res.ok && (data.ok === true || data.valid === true);
 
       if (isSuccess) {
-        msg.innerHTML = `<span class='ok'>Enrollment verified for ${email}.</span>`;
         otpInput.value = "";
-
-        // ✅ verification completes re-enroll: clear override
-        clearPendingOverride();
+        showToast("success", "Enrollment verified", "You are successfully enrolled.", 5200);
       } else {
         const reason = data?.error || data?.reason || "Verification failed.";
-        msg.innerHTML = `<span class='err'>${reason}</span>`;
+        showToast("error", "Verification failed", reason, 6000);
       }
 
       await refreshStatus(user);
     } catch (e) {
       console.error(e);
-      msg.innerHTML = "<span class='err'>Verification failed (network/error).</span>";
+      showToast("error", "Verify error", "Verification failed (network/error).", 6000);
       await refreshStatus(user);
     } finally {
       isVerifyBusy = false;
+      verifyBtn.textContent = originalLabel;
       setButtonsState({ user: lastKnownUser, status: lastKnownStatus });
     }
   }
@@ -671,6 +870,8 @@
   document.getElementById("verifyBtn").addEventListener("click", verifyCode);
 
   (async () => {
+    ensureStatusTools(); // inject refresh link + timestamp area
+    clearInlineMessages(); // stop using inline message areas
     const user = await getUserInfo();
     lastKnownUser = user;
     setAuthUI(user);
