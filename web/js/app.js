@@ -1,17 +1,12 @@
 (() => {
   const API = window.APP_CONFIG?.API_BASE;
 
-  // Track last known backend status for UI decisions
   let lastKnownStatus = null; // "not_enrolled" | "pending" | "enrolled" | null
   let lastKnownUser = null;
 
-  // Busy flags
   let isEnrollBusy = false;
   let isVerifyBusy = false;
 
-  // -----------------------------
-  // Helpers
-  // -----------------------------
   function emailToAlnumKey(email) {
     return (email || "").toLowerCase().replace(/[^a-z0-9]/g, "");
   }
@@ -57,7 +52,7 @@
   }
 
   // -----------------------------
-  // Toasts (Step 1)
+  // Toasts
   // -----------------------------
   function ensureToastStyles() {
     if (document.getElementById("totpToastStyles")) return;
@@ -75,14 +70,13 @@
         z-index: 10000;
         pointer-events: none;
       }
-
       .toast {
         width: min(360px, calc(100vw - 32px));
         background: #fff;
         border: 1px solid var(--border, #e5e7eb);
         border-radius: 12px;
         box-shadow: 0 16px 40px rgba(0,0,0,0.14);
-        padding: 12px 12px;
+        padding: 12px;
         display: flex;
         gap: 10px;
         align-items: flex-start;
@@ -91,34 +85,23 @@
         opacity: 0;
         transition: opacity 140ms ease, transform 140ms ease;
       }
-
-      .toast.show {
-        opacity: 1;
-        transform: translateY(0);
-      }
+      .toast.show { opacity: 1; transform: translateY(0); }
 
       .toastIcon {
-        width: 28px;
-        height: 28px;
+        width: 28px; height: 28px;
         border-radius: 10px;
         display: grid;
         place-items: center;
         flex: 0 0 auto;
         font-size: 14px;
       }
-
-      .toastBody {
-        flex: 1 1 auto;
-        min-width: 0;
-      }
-
+      .toastBody { flex: 1 1 auto; min-width: 0; }
       .toastTitle {
         margin: 0;
         font-size: 13px;
         font-weight: 800;
         color: var(--text-main, #111827);
       }
-
       .toastMsg {
         margin: 2px 0 0 0;
         font-size: 12px;
@@ -126,7 +109,6 @@
         line-height: 1.35;
         word-break: break-word;
       }
-
       .toastClose {
         border: 0;
         background: transparent;
@@ -160,13 +142,7 @@
 
   function showToast(type, title, message, ttlMs = 4500) {
     const host = ensureToastHost();
-
-    const iconByType = {
-      success: "✅",
-      warn: "⚠️",
-      error: "⛔",
-      info: "ℹ️"
-    };
+    const iconByType = { success: "✅", warn: "⚠️", error: "⛔", info: "ℹ️" };
 
     const toast = document.createElement("div");
     toast.className = `toast ${type || "info"}`;
@@ -184,11 +160,8 @@
     toast.querySelector(".toastClose").addEventListener("click", () => toast.remove());
 
     host.appendChild(toast);
-
-    // animate in
     requestAnimationFrame(() => toast.classList.add("show"));
 
-    // auto-dismiss
     if (ttlMs > 0) {
       setTimeout(() => {
         toast.classList.remove("show");
@@ -255,101 +228,32 @@
     const style = document.createElement("style");
     style.id = "totpModalStyles";
     style.textContent = `
-      .modalOverlay {
-        position: fixed;
-        inset: 0;
-        background: rgba(17,24,39,0.55);
-        display: none;
-        align-items: center;
-        justify-content: center;
-        padding: 16px;
-        z-index: 9999;
-      }
+      .modalOverlay { position: fixed; inset: 0; background: rgba(17,24,39,0.55); display: none;
+        align-items: center; justify-content: center; padding: 16px; z-index: 9999; }
       .modalOverlay.open { display: flex; }
-
-      .modalDialog {
-        width: min(520px, 100%);
-        background: var(--bg-card, #fff);
-        border: 1px solid var(--border, #e5e7eb);
-        border-radius: 14px;
-        box-shadow: 0 24px 60px rgba(0,0,0,0.25);
-        overflow: hidden;
-      }
-
-      .modalHeader {
-        padding: 16px 16px 12px;
-        display: flex;
-        gap: 12px;
-        align-items: flex-start;
-        border-bottom: 1px solid var(--border, #e5e7eb);
-      }
-
-      .modalIcon {
-        width: 36px;
-        height: 36px;
-        border-radius: 12px;
-        display: grid;
-        place-items: center;
-        background: var(--warn-bg, #fffbeb);
-        color: var(--warn-text, #b45309);
-        font-size: 18px;
-        flex: 0 0 auto;
-      }
-
-      .modalTitle {
-        margin: 0;
-        font-size: 16px;
-        font-weight: 700;
-        color: var(--text-main, #111827);
-      }
-
-      .modalBody {
-        padding: 12px 16px 16px;
-        color: var(--text-main, #111827);
-      }
-
-      .modalBody p {
-        margin: 0;
-        color: var(--text-muted, #6b7280);
-        line-height: 1.45;
-        white-space: pre-line;
-      }
-
-      .modalActions {
-        display: flex;
-        gap: 10px;
-        justify-content: flex-end;
-        padding: 14px 16px 16px;
-        border-top: 1px solid var(--border, #e5e7eb);
-      }
-
-      .btnGhost {
-        padding: 9px 14px;
-        border-radius: 10px;
-        border: 1px solid var(--border, #e5e7eb);
-        background: #fff;
-        cursor: pointer;
-        font-weight: 600;
-      }
-
-      .btnDanger {
-        padding: 9px 14px;
-        border-radius: 10px;
-        border: 1px solid var(--err-text, #b91c1c);
-        background: var(--err-bg, #fef2f2);
-        color: var(--err-text, #b91c1c);
-        cursor: pointer;
-        font-weight: 700;
-      }
-      .btnDanger:hover { filter: brightness(0.98); }
-      .btnGhost:hover { background: #f9fafb; }
+      .modalDialog { width: min(520px, 100%); background: var(--bg-card, #fff);
+        border: 1px solid var(--border, #e5e7eb); border-radius: 14px;
+        box-shadow: 0 24px 60px rgba(0,0,0,0.25); overflow: hidden; }
+      .modalHeader { padding: 16px 16px 12px; display: flex; gap: 12px; align-items: flex-start;
+        border-bottom: 1px solid var(--border, #e5e7eb); }
+      .modalIcon { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center;
+        background: var(--warn-bg, #fffbeb); color: var(--warn-text, #b45309); font-size: 18px; flex: 0 0 auto; }
+      .modalTitle { margin: 0; font-size: 16px; font-weight: 700; color: var(--text-main, #111827); }
+      .modalBody { padding: 12px 16px 16px; color: var(--text-main, #111827); }
+      .modalBody p { margin: 0; color: var(--text-muted, #6b7280); line-height: 1.45; white-space: pre-line; }
+      .modalActions { display: flex; gap: 10px; justify-content: flex-end; padding: 14px 16px 16px;
+        border-top: 1px solid var(--border, #e5e7eb); }
+      .btnGhost { padding: 9px 14px; border-radius: 10px; border: 1px solid var(--border, #e5e7eb);
+        background: #fff; cursor: pointer; font-weight: 600; }
+      .btnDanger { padding: 9px 14px; border-radius: 10px; border: 1px solid var(--err-text, #b91c1c);
+        background: var(--err-bg, #fef2f2); color: var(--err-text, #b91c1c); cursor: pointer; font-weight: 700; }
+      .btnDanger:hover { filter: brightness(0.98); } .btnGhost:hover { background: #f9fafb; }
     `;
     document.head.appendChild(style);
   }
 
   function createConfirmModal() {
     ensureModalStyles();
-
     const overlay = document.createElement("div");
     overlay.className = "modalOverlay";
     overlay.setAttribute("role", "dialog");
@@ -359,20 +263,15 @@
       <div class="modalDialog" role="document">
         <div class="modalHeader">
           <div class="modalIcon" aria-hidden="true">⚠️</div>
-          <div>
-            <h3 class="modalTitle" id="modalTitle">Confirm action</h3>
-          </div>
+          <div><h3 class="modalTitle" id="modalTitle">Confirm action</h3></div>
         </div>
-        <div class="modalBody">
-          <p id="modalMessage">Are you sure?</p>
-        </div>
+        <div class="modalBody"><p id="modalMessage">Are you sure?</p></div>
         <div class="modalActions">
           <button type="button" class="btnGhost" id="modalCancelBtn">Cancel</button>
           <button type="button" class="btnDanger" id="modalConfirmBtn">Continue</button>
         </div>
       </div>
     `;
-
     document.body.appendChild(overlay);
 
     const titleEl = overlay.querySelector("#modalTitle");
@@ -445,7 +344,7 @@
   }
 
   // -----------------------------
-  // Status UI + Refresh link + Last checked (Step 2)
+  // Status UI + Refresh link + Last checked
   // -----------------------------
   function ensureStatusTools() {
     const headings = Array.from(document.querySelectorAll("h2"));
@@ -457,11 +356,9 @@
     const card = statusH2.closest(".card");
     if (!card) return null;
 
-    // Find the existing muted text block
     const msgEl = card.querySelector(".muted");
     if (!msgEl) return null;
 
-    // Create tools bar once
     let tools = card.querySelector("#statusToolsBar");
     if (!tools) {
       const styleId = "statusToolsStyles";
@@ -469,23 +366,10 @@
         const style = document.createElement("style");
         style.id = styleId;
         style.textContent = `
-          .statusToolsBar {
-            margin-top: 10px;
-            display: flex;
-            gap: 12px;
-            align-items: center;
-            flex-wrap: wrap;
-            font-size: 12px;
-          }
-          .statusToolsBar a {
-            color: var(--primary, #2563eb);
-            text-decoration: none;
-            font-weight: 600;
-          }
+          .statusToolsBar { margin-top: 10px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; font-size: 12px; }
+          .statusToolsBar a { color: var(--primary, #2563eb); text-decoration: none; font-weight: 600; }
           .statusToolsBar a:hover { text-decoration: underline; }
-          .statusToolsMuted {
-            color: var(--text-muted, #6b7280);
-          }
+          .statusToolsMuted { color: var(--text-muted, #6b7280); }
         `;
         document.head.appendChild(style);
       }
@@ -493,15 +377,12 @@
       tools = document.createElement("div");
       tools.id = "statusToolsBar";
       tools.className = "statusToolsBar";
-
       tools.innerHTML = `
         <a href="#" id="refreshStatusLink">Refresh status</a>
         <span class="statusToolsMuted" id="lastCheckedText">Last checked: —</span>
       `;
-
       msgEl.insertAdjacentElement("afterend", tools);
 
-      // Hook refresh click
       tools.querySelector("#refreshStatusLink").addEventListener("click", async (e) => {
         e.preventDefault();
         if (!lastKnownUser?.userDetails) {
@@ -516,7 +397,6 @@
     return {
       card,
       msgEl,
-      tools,
       lastCheckedEl: card.querySelector("#lastCheckedText")
     };
   }
@@ -536,7 +416,6 @@
       el.textContent = "Checking status…";
       return;
     }
-
     if (state === "anonymous") {
       el.innerHTML =
         "<span class='warn'>Login required</span> <span class='muted'>Sign in to view enrollment status.</span>";
@@ -544,7 +423,6 @@
     }
 
     const parts = [];
-
     if (state === "not_enrolled") {
       parts.push("<span class='warn'>Not enrolled</span>");
       parts.push("<span class='muted'>You haven’t completed TOTP enrollment yet.</span>");
@@ -580,7 +458,7 @@
   }
 
   // -----------------------------
-  // Buttons state (Step 9 stays)
+  // ✅ CHANGE #1: Verify button enabled regardless of status
   // -----------------------------
   function setButtonsState({ user, status }) {
     const startBtn = document.getElementById("startEnrollBtn");
@@ -589,7 +467,9 @@
     const isAuthed = !!user?.userDetails;
 
     startBtn.disabled = !isAuthed || isEnrollBusy;
-    verifyBtn.disabled = !isAuthed || isVerifyBusy || status !== "pending";
+
+    // ✅ Verify should be enabled whenever user is authed (unless busy)
+    verifyBtn.disabled = !isAuthed || isVerifyBusy;
 
     if (!isAuthed) {
       startBtn.textContent = "Login to Enroll";
@@ -602,11 +482,11 @@
     } else {
       startBtn.textContent = "Start / Re-generate QR";
     }
+
+    // Optional: keep verify label stable
+    verifyBtn.textContent = isVerifyBusy ? "Verifying…" : "Verify";
   }
 
-  // -----------------------------
-  // Refresh status (now updates last-checked)
-  // -----------------------------
   async function refreshStatus(user, opts = {}) {
     try {
       ensureStatusTools();
@@ -680,9 +560,6 @@
     }
   }
 
-  // -----------------------------
-  // Enrollment + Verification (toast-based messages)
-  // -----------------------------
   function clearInlineMessages() {
     const startEnrollMsg = document.getElementById("startEnrollMsg");
     const verifyMsg = document.getElementById("verifyMsg");
@@ -711,7 +588,6 @@
       return;
     }
 
-    // Re-enroll confirm if enrolled
     const allowed = await confirmReEnrollIfNeeded();
     if (!allowed) {
       showToast("info", "Cancelled", "Re-enroll cancelled. Existing enrollment unchanged.", 2600);
@@ -720,10 +596,6 @@
 
     isEnrollBusy = true;
     setButtonsState({ user: lastKnownUser, status: lastKnownStatus });
-
-    const startBtn = document.getElementById("startEnrollBtn");
-    const originalLabel = startBtn.textContent;
-    startBtn.textContent = "Generating…";
 
     const qrBlock = document.getElementById("qrBlock");
     qrBlock.classList.add("is-hidden");
@@ -771,27 +643,23 @@
         5200
       );
 
-      // Status should now be pending (backend fix). Refresh it.
       await refreshStatus(user);
     } catch (e) {
       console.error(e);
       showToast("error", "Enroll error", "Failed to start enrollment (network/error).", 6000);
     } finally {
       isEnrollBusy = false;
-      startBtn.textContent = originalLabel; // refreshStatus will set proper label anyway
       setButtonsState({ user: lastKnownUser, status: lastKnownStatus });
     }
   }
 
+  // -----------------------------
+  // ✅ CHANGE #2: Allow Verify regardless of status (no pending guard)
+  // -----------------------------
   async function verifyCode() {
     if (isVerifyBusy) return;
 
     clearInlineMessages();
-
-    if (lastKnownStatus !== "pending") {
-      showToast("warn", "Nothing to verify", "Generate a QR first, then verify the OTP.", 4200);
-      return;
-    }
 
     const otpInput = document.getElementById("otpInput");
     const otp = otpInput.value.trim();
@@ -801,13 +669,6 @@
       return;
     }
 
-    isVerifyBusy = true;
-    setButtonsState({ user: lastKnownUser, status: lastKnownStatus });
-
-    const verifyBtn = document.getElementById("verifyBtn");
-    const originalLabel = verifyBtn.textContent;
-    verifyBtn.textContent = "Verifying…";
-
     const user = await getUserInfo();
     lastKnownUser = user;
 
@@ -815,22 +676,28 @@
     if (!email) {
       showToast("warn", "Login required", "Please sign in before verifying OTP.");
       await refreshStatus(user);
-      isVerifyBusy = false;
-      verifyBtn.textContent = originalLabel;
-      setButtonsState({ user: lastKnownUser, status: lastKnownStatus });
       return;
     }
 
     const employeeId = emailToAlnumKey(email);
     if (!employeeId) {
       showToast("error", "Verify failed", "Unable to derive identifier from your email.");
-      isVerifyBusy = false;
-      verifyBtn.textContent = originalLabel;
-      setButtonsState({ user: lastKnownUser, status: lastKnownStatus });
       return;
     }
 
-    showToast("info", "Verifying", "Validating the OTP…", 2000);
+    // Helpful context toast (optional)
+    if (lastKnownStatus === "enrolled") {
+      showToast("info", "Check enrollment", "Verifying OTP against your current enrollment…", 2200);
+    } else if (lastKnownStatus === "not_enrolled") {
+      showToast("info", "Not enrolled yet", "If this fails, generate a QR first.", 2600);
+    } else if (lastKnownStatus === "pending") {
+      showToast("info", "Verifying", "Completing enrollment verification…", 2200);
+    } else {
+      showToast("info", "Verifying", "Validating OTP…", 2000);
+    }
+
+    isVerifyBusy = true;
+    setButtonsState({ user: lastKnownUser, status: lastKnownStatus });
 
     try {
       const url = API + "/api/verify";
@@ -840,17 +707,19 @@
         body: JSON.stringify({ employeeId, otp })
       });
 
+      // If backend returns non-200 with JSON, still parse for error
       const data = await res.json().catch(() => ({}));
       const isSuccess = res.ok && (data.ok === true || data.valid === true);
 
       if (isSuccess) {
         otpInput.value = "";
-        showToast("success", "Enrollment verified", "You are successfully enrolled.", 5200);
+        showToast("success", "OTP valid", "Your current enrollment is working.", 5200);
       } else {
         const reason = data?.error || data?.reason || "Verification failed.";
-        showToast("error", "Verification failed", reason, 6000);
+        showToast("error", "OTP invalid", reason, 6000);
       }
 
+      // refresh status after check
       await refreshStatus(user);
     } catch (e) {
       console.error(e);
@@ -858,20 +727,19 @@
       await refreshStatus(user);
     } finally {
       isVerifyBusy = false;
-      verifyBtn.textContent = originalLabel;
       setButtonsState({ user: lastKnownUser, status: lastKnownStatus });
     }
   }
 
   // -----------------------------
-  // Wire up events + Init
+  // Wire up + Init
   // -----------------------------
   document.getElementById("startEnrollBtn").addEventListener("click", startEnrollment);
   document.getElementById("verifyBtn").addEventListener("click", verifyCode);
 
   (async () => {
-    ensureStatusTools(); // inject refresh link + timestamp area
-    clearInlineMessages(); // stop using inline message areas
+    ensureStatusTools();
+    clearInlineMessages();
     const user = await getUserInfo();
     lastKnownUser = user;
     setAuthUI(user);
