@@ -672,3 +672,96 @@ input {
     left: -28px;
   }
 }
+
+/* =========================================================
+   ENTERPRISE-SAFE FLOW SYSTEM (NO :has)
+========================================================= */
+
+.flow-enabled {
+  position: relative;
+}
+
+/* Vertical line */
+.flow-enabled::before {
+  content: "";
+  position: absolute;
+  top: 180px;
+  left: 18px;
+  bottom: 40px;
+  width: 2px;
+  background: var(--border);
+}
+
+/* Space cards */
+.flow-enabled .card {
+  position: relative;
+  margin-left: 36px;
+}
+
+/* Base dot */
+.flow-enabled .card::before {
+  content: "";
+  position: absolute;
+  left: -36px;
+  top: 22px;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--border);
+  box-shadow: 0 0 0 4px var(--bg-page);
+  transition: all 300ms ease;
+}
+
+/* Do not mark title card */
+.flow-enabled .card:first-of-type::before {
+  display: none;
+}
+
+/* =========================================================
+   STEP STATES
+========================================================= */
+
+/* ✅ Completed */
+.flow-enabled .card.step-complete::before {
+  background: var(--success-text);
+  box-shadow: 0 0 0 4px var(--bg-page);
+}
+
+/* 🔵 Current */
+.flow-enabled .card.step-current::before {
+  background: var(--primary);
+  transform: scale(1.25);
+  box-shadow: 0 0 0 6px rgba(37,99,235,0.25);
+  animation: pulseStep 1.6s infinite;
+}
+
+/* ⏳ Pending */
+.flow-enabled .card.step-pending::before {
+  background: var(--border);
+}
+
+/* =========================================================
+   ANIMATION
+========================================================= */
+@keyframes pulseStep {
+  0%   { box-shadow: 0 0 0 6px rgba(37,99,235,0.25); }
+  70%  { box-shadow: 0 0 0 12px rgba(37,99,235,0); }
+  100% { box-shadow: 0 0 0 6px rgba(37,99,235,0); }
+}
+
+/* =========================================================
+   MOBILE SAFETY
+========================================================= */
+@media (max-width: 480px) {
+  .flow-enabled::before {
+    left: 12px;
+  }
+
+  .flow-enabled .card {
+    margin-left: 28px;
+  }
+
+  .flow-enabled .card::before {
+    left: -28px;
+  }
+}
