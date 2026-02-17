@@ -251,7 +251,15 @@
 
     document.getElementById("orgNameText").textContent = isAuthed ? orgFromEmail(email) : "—";
     document.getElementById("authState").textContent = isAuthed ? "Authenticated" : "Anonymous";
-    document.getElementById("ddEmail").textContent = isAuthed ? email : "Not signed in";
+    
+const ddEmailEl = document.getElementById("ddEmail");
+if (ddEmailEl) {
+  const value = isAuthed ? email : "Not signed in";
+  ddEmailEl.textContent = value;
+  ddEmailEl.title = value;   // ✅ native tooltip with full email
+}
+
+
 
     const ini = isAuthed ? initialsFromEmail(email) : "?";
     document.getElementById("avatarCircle").textContent = ini;

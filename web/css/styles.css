@@ -577,3 +577,152 @@ input {
 .dropdown {
   max-width: calc(100vw - 24px - env(safe-area-inset-left) - env(safe-area-inset-right));
 }
+/* === Dropdown email tooltip polish === */
+.ddEmail {
+  cursor: default;           /* indicates hover info */
+}
+
+/* Optional: subtle hint on hover */
+.ddEmail:hover {
+  text-decoration: underline dotted;
+}
+
+/* =========================================================
+   BUTTON TYPOGRAPHY NORMALIZATION
+   (All buttons look identical everywhere)
+========================================================= */
+
+/* Canonical button style */
+button,
+a.btnLike,
+.actions button,
+.actions a.btnLike {
+  font-family: inherit;
+  font-size: 14px;          /* ✅ unified font size */
+  line-height: 1.2;         /* ✅ consistent vertical rhythm */
+  font-weight: 600;
+  letter-spacing: 0.01em;
+
+  /* Prevent browser-specific rendering */
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Primary buttons explicitly inherit same typography */
+button.primary,
+a.btnLike.primary {
+  font-size: 14px;
+  line-height: 1.2;
+  font-weight: 600;
+}
+
+/* Mini buttons scale proportionally */
+button.miniBtn {
+  font-size: 12px;
+  line-height: 1.2;
+  font-weight: 600;
+}
+
+/* Ensure links never look different from buttons */
+a.btnLike {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* =========================================================
+   CONSISTENT ACCESSIBLE FOCUS RING (BUTTONS)
+========================================================= */
+
+/* Remove inconsistent browser outlines */
+button:focus,
+a.btnLike:focus {
+  outline: none;
+}
+
+/* Show focus ring ONLY when it matters (keyboard navigation) */
+button:focus-visible,
+a.btnLike:focus-visible {
+  outline: 3px solid var(--primary);   /* brand color */
+  outline-offset: 3px;                 /* space from button edge */
+  border-radius: 12px;                 /* match button shape */
+}
+
+/* Optional: slightly softer ring for non-primary buttons */
+button:not(.primary):focus-visible,
+a.btnLike:not(.primary):focus-visible {
+  outline-color: rgba(37, 99, 235, 0.75);
+}
+
+/* Respect reduced-motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  button:focus-visible,
+  a.btnLike:focus-visible {
+    transition: none;
+  }
+}
+
+/* =========================================================
+   CONSISTENT ACCESSIBLE FOCUS RING
+   Buttons, Inputs, Dropdown Items
+========================================================= */
+
+/* 1. Remove inconsistent browser outlines */
+button:focus,
+a.btnLike:focus,
+input:focus,
+.ddItem:focus {
+  outline: none;
+}
+
+/* 2. Shared focus-visible ring */
+button:focus-visible,
+a.btnLike:focus-visible,
+input:focus-visible,
+.ddItem:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 3px;
+  border-radius: 12px;
+  animation: focusPulse 160ms ease-out;
+}
+
+/* Inputs need slightly tighter radius */
+input:focus-visible {
+  border-radius: 10px;
+}
+
+/* Dropdown items align visually */
+.ddItem {
+  border-radius: 10px;
+}
+
+/* 3. Hover + focus harmony (no clash) */
+.ddItem:hover {
+  background: rgba(127, 127, 127, 0.08);
+}
+
+/* =========================================================
+   SUBTLE FOCUS ANIMATION (OPTIONAL)
+========================================================= */
+@keyframes focusPulse {
+  from {
+    outline-offset: 6px;
+    outline-color: rgba(37, 99, 235, 0.35);
+  }
+  to {
+    outline-offset: 3px;
+    outline-color: var(--primary);
+  }
+}
+
+/* =========================================================
+   REDUCED MOTION RESPECT
+========================================================= */
+@media (prefers-reduced-motion: reduce) {
+  button:focus-visible,
+  a.btnLike:focus-visible,
+  input:focus-visible,
+  .ddItem:focus-visible {
+    animation: none;
+  }
+}
