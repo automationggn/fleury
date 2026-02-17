@@ -21,7 +21,7 @@
   --err-text: #b91c1c;
 }
 
-/* Optional Dark Mode (zero JS) */
+/* Dark mode */
 @media (prefers-color-scheme: dark) {
   :root {
     --bg-page: #0b1220;
@@ -75,7 +75,6 @@ body {
   border-radius: 999px;
   font-size: 12px;
   font-weight: 700;
-  margin-right: 6px;
 }
 
 .ok   { background: var(--success-bg); color: var(--success-text); }
@@ -157,6 +156,7 @@ body {
   top: 48px;
   right: 0;
   width: 260px;
+  max-width: calc(100vw - 24px);
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 14px;
@@ -173,6 +173,12 @@ body {
   gap: 10px;
   align-items: center;
   padding: 8px;
+  min-width: 0;
+}
+
+.ddHeader > div:last-child {
+  min-width: 0;
+  flex: 1;
 }
 
 .ddEmail {
@@ -181,6 +187,11 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  cursor: default;
+}
+
+.ddEmail:hover {
+  text-decoration: underline dotted;
 }
 
 .ddMuted {
@@ -204,7 +215,9 @@ body {
   color: var(--text-main);
 }
 
-.ddItem:hover { background: rgba(127,127,127,0.08); }
+.ddItem:hover {
+  background: rgba(127,127,127,0.08);
+}
 
 .ddIcon {
   width: 28px;
@@ -230,7 +243,6 @@ body {
 .card h2 {
   margin: 0 0 12px;
   font-size: 17px;
-  text-align: left;
 }
 
 .pageTitle {
@@ -243,9 +255,7 @@ body {
   color: var(--text-muted);
 }
 
-.center { text-align: center; } /* your HTML uses this */
-.actions.center { justify-content: center; } /* keep */
-.statusToolsBar.center { justify-content: center; } /* keep */
+.center { text-align: center; }
 
 .divider {
   height: 1px;
@@ -260,23 +270,35 @@ body {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: center;
 }
 
 /* =========================================================
-   BUTTONS
+   ✅ UNIFIED BUTTON SYSTEM (FINAL)
 ========================================================= */
 button,
 a.btnLike {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+
   padding: 12px 18px;
   border-radius: 12px;
   border: 1px solid var(--border);
+
   background: var(--bg-card);
-  font-weight: 600;
-  text-align: center;
+  color: var(--text-main);
   cursor: pointer;
   text-decoration: none;
-  color: var(--text-main);
+
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 button.primary,
@@ -292,6 +314,7 @@ button:disabled {
   cursor: not-allowed;
 }
 
+/* Smaller variant */
 .miniBtn {
   padding: 8px 14px;
   font-size: 12px;
@@ -311,192 +334,53 @@ input {
 }
 
 /* =========================================================
-   QR
+   FOCUS RING (BUTTONS, INPUTS, DROPDOWN)
 ========================================================= */
-.qrBlock { margin-top: 16px; }
-.qrBlock.is-hidden { display: none; }
-
-.qr {
-  width: 220px;
-  height: 220px;
-  border-radius: 16px;
-  border: 1px solid var(--border);
-  background: var(--bg-card);
+button:focus,
+a.btnLike:focus,
+input:focus,
+.ddItem:focus {
+  outline: none;
 }
 
-/* =========================================================
-   STATUS TOOLS
-========================================================= */
-.statusToolsBar {
-  margin-top: 12px;
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  align-items: center;
-  font-size: 12px;
-}
-
-.statusToolsMuted { color: var(--text-muted); }
-
-/* =========================================================
-   TOASTS (SAFE AREA)
-========================================================= */
-.toastHost {
-  position: fixed;
-  top: calc(12px + env(safe-area-inset-top));
-  left: calc(12px + env(safe-area-inset-left));
-  right: calc(12px + env(safe-area-inset-right));
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  z-index: 10000;
-}
-
-.toast {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 12px;
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-  box-shadow: 0 16px 40px rgba(0,0,0,0.18);
-  opacity: 0;
-  transform: translateY(-6px);
-  transition: opacity 150ms ease, transform 150ms ease;
-}
-
-.toast.show {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.toastIcon {
-  width: 28px;
-  height: 28px;
-  border-radius: 10px;
-  display: grid;
-  place-items: center;
-  flex: 0 0 auto;
-  background: rgba(127,127,127,0.12);
-}
-
-.toastBody { flex: 1; }
-
-.toastTitle {
-  font-size: 13px;
-  font-weight: 800;
-  margin: 0;
-}
-
-.toastMsg {
-  font-size: 12px;
-  margin: 2px 0 0;
-  color: var(--text-muted);
-}
-
-.toastClose {
-  margin-left: auto;
-  border: none;
-  background: transparent;
-  font-size: 16px;
-  cursor: pointer;
-  color: #9ca3af;
-}
-
-/* =========================================================
-   MODAL
-========================================================= */
-.modalOverlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(17,24,39,0.55);
-  display: none;
-  align-items: flex-end;
-  justify-content: center;
-  z-index: 9999;
-}
-
-.modalOverlay.open { display: flex; }
-
-.modalDialog {
-  width: 100%;
-  background: var(--bg-card);
-  border-radius: 16px 16px 0 0;
-  border: 1px solid var(--border);
-  padding-bottom: env(safe-area-inset-bottom);
-}
-
-.modalHeader {
-  display: flex;
-  gap: 12px;
-  padding: 16px;
-  border-bottom: 1px solid var(--border);
-  align-items: center;
-}
-
-.modalIcon {
-  width: 36px;
-  height: 36px;
+button:focus-visible,
+a.btnLike:focus-visible,
+input:focus-visible,
+.ddItem:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 3px;
   border-radius: 12px;
-  background: var(--warn-bg);
-  color: var(--warn-text);
-  display: grid;
-  place-items: center;
+  animation: focusPulse 160ms ease-out;
 }
 
-.modalBody { padding: 16px; }
-
-.modalActions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  padding: 16px;
-  border-top: 1px solid var(--border);
+@keyframes focusPulse {
+  from {
+    outline-offset: 6px;
+    outline-color: rgba(37,99,235,0.35);
+  }
+  to {
+    outline-offset: 3px;
+    outline-color: var(--primary);
+  }
 }
 
-.btnGhost { background: var(--bg-card); }
-.btnDanger {
-  background: var(--err-bg);
-  color: var(--err-text);
-  border-color: var(--err-text);
-}
-
-/* =========================================================
-   RESPONSIVE
-========================================================= */
-@media (min-width: 640px) {
-  .app {
-    max-width: 760px;
-    margin: 0 auto;
-  }
-  .topbar {
-    flex-direction: row;
-    justify-content: space-between;
-  }
-  .actions {
-    flex-direction: row;
-  }
-  .modalOverlay {
-    align-items: center;
-  }
-  .modalDialog {
-    width: 520px;
-    border-radius: 16px;
+@media (prefers-reduced-motion: reduce) {
+  button:focus-visible,
+  a.btnLike:focus-visible,
+  input:focus-visible,
+  .ddItem:focus-visible {
+    animation: none;
   }
 }
 
 /* =========================================================
-   FLOW (ENTERPRISE SAFE, NO :has)
-   JS adds: flow-enabled to .app
-   JS tags step cards: .flow-step + step-(pending/current/complete)
+   FLOW (UNCHANGED)
 ========================================================= */
 .flow-enabled .flow-step {
   position: relative;
   margin-left: 36px;
 }
 
-/* Dot */
 .flow-enabled .flow-step::before {
   content: "";
   position: absolute;
@@ -510,7 +394,6 @@ input {
   transition: all 280ms ease;
 }
 
-/* Connector line (down to next step) */
 .flow-enabled .flow-step::after {
   content: "";
   position: absolute;
@@ -521,12 +404,10 @@ input {
   background: var(--border);
 }
 
-/* Last step has no connector */
 .flow-enabled .flow-step.flow-last::after {
   display: none;
 }
 
-/* States */
 .flow-enabled .flow-step.step-complete::before {
   background: var(--success-text);
 }
@@ -538,191 +419,14 @@ input {
   animation: pulseStep 1.6s infinite;
 }
 
-.flow-enabled .flow-step.step-pending::before {
-  background: var(--border);
-}
-
 @keyframes pulseStep {
   0%   { box-shadow: 0 0 0 6px rgba(37,99,235,0.25); }
   70%  { box-shadow: 0 0 0 12px rgba(37,99,235,0); }
   100% { box-shadow: 0 0 0 6px rgba(37,99,235,0); }
 }
 
-/* Mobile flow spacing */
 @media (max-width: 480px) {
   .flow-enabled .flow-step { margin-left: 28px; }
   .flow-enabled .flow-step::before { left: -28px; }
   .flow-enabled .flow-step::after  { left: -22px; }
-}
-/* === Dropdown email overflow fix (keep inside menu) === */
-.ddHeader {
-  min-width: 0;               /* allow children to shrink */
-}
-
-.ddHeader > div:last-child {
-  min-width: 0;               /* important for ellipsis in flex layouts */
-  flex: 1 1 auto;
-}
-
-.ddEmail {
-  display: block;             /* ensure ellipsis applies */
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  word-break: keep-all;
-}
-
-/* Optional: prevent dropdown from getting too wide on small screens */
-.dropdown {
-  max-width: calc(100vw - 24px - env(safe-area-inset-left) - env(safe-area-inset-right));
-}
-/* === Dropdown email tooltip polish === */
-.ddEmail {
-  cursor: default;           /* indicates hover info */
-}
-
-/* Optional: subtle hint on hover */
-.ddEmail:hover {
-  text-decoration: underline dotted;
-}
-
-/* =========================================================
-   BUTTON TYPOGRAPHY NORMALIZATION
-   (All buttons look identical everywhere)
-========================================================= */
-
-/* Canonical button style */
-button,
-a.btnLike,
-.actions button,
-.actions a.btnLike {
-  font-family: inherit;
-  font-size: 14px;          /* ✅ unified font size */
-  line-height: 1.2;         /* ✅ consistent vertical rhythm */
-  font-weight: 600;
-  letter-spacing: 0.01em;
-
-  /* Prevent browser-specific rendering */
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
-}
-
-/* Primary buttons explicitly inherit same typography */
-button.primary,
-a.btnLike.primary {
-  font-size: 14px;
-  line-height: 1.2;
-  font-weight: 600;
-}
-
-/* Mini buttons scale proportionally */
-button.miniBtn {
-  font-size: 12px;
-  line-height: 1.2;
-  font-weight: 600;
-}
-
-/* Ensure links never look different from buttons */
-a.btnLike {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* =========================================================
-   CONSISTENT ACCESSIBLE FOCUS RING (BUTTONS)
-========================================================= */
-
-/* Remove inconsistent browser outlines */
-button:focus,
-a.btnLike:focus {
-  outline: none;
-}
-
-/* Show focus ring ONLY when it matters (keyboard navigation) */
-button:focus-visible,
-a.btnLike:focus-visible {
-  outline: 3px solid var(--primary);   /* brand color */
-  outline-offset: 3px;                 /* space from button edge */
-  border-radius: 12px;                 /* match button shape */
-}
-
-/* Optional: slightly softer ring for non-primary buttons */
-button:not(.primary):focus-visible,
-a.btnLike:not(.primary):focus-visible {
-  outline-color: rgba(37, 99, 235, 0.75);
-}
-
-/* Respect reduced-motion preferences */
-@media (prefers-reduced-motion: reduce) {
-  button:focus-visible,
-  a.btnLike:focus-visible {
-    transition: none;
-  }
-}
-
-/* =========================================================
-   CONSISTENT ACCESSIBLE FOCUS RING
-   Buttons, Inputs, Dropdown Items
-========================================================= */
-
-/* 1. Remove inconsistent browser outlines */
-button:focus,
-a.btnLike:focus,
-input:focus,
-.ddItem:focus {
-  outline: none;
-}
-
-/* 2. Shared focus-visible ring */
-button:focus-visible,
-a.btnLike:focus-visible,
-input:focus-visible,
-.ddItem:focus-visible {
-  outline: 3px solid var(--primary);
-  outline-offset: 3px;
-  border-radius: 12px;
-  animation: focusPulse 160ms ease-out;
-}
-
-/* Inputs need slightly tighter radius */
-input:focus-visible {
-  border-radius: 10px;
-}
-
-/* Dropdown items align visually */
-.ddItem {
-  border-radius: 10px;
-}
-
-/* 3. Hover + focus harmony (no clash) */
-.ddItem:hover {
-  background: rgba(127, 127, 127, 0.08);
-}
-
-/* =========================================================
-   SUBTLE FOCUS ANIMATION (OPTIONAL)
-========================================================= */
-@keyframes focusPulse {
-  from {
-    outline-offset: 6px;
-    outline-color: rgba(37, 99, 235, 0.35);
-  }
-  to {
-    outline-offset: 3px;
-    outline-color: var(--primary);
-  }
-}
-
-/* =========================================================
-   REDUCED MOTION RESPECT
-========================================================= */
-@media (prefers-reduced-motion: reduce) {
-  button:focus-visible,
-  a.btnLike:focus-visible,
-  input:focus-visible,
-  .ddItem:focus-visible {
-    animation: none;
-  }
 }
