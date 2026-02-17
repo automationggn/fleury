@@ -1,11 +1,17 @@
 (() => {
   const API = window.APP_CONFIG?.API_BASE;
 
-  // Keeps last known backend status for decision-making (e.g., re-enroll guard)
+  // Track last known backend status for UI decisions
   let lastKnownStatus = null; // "not_enrolled" | "pending" | "enrolled" | null
   let lastKnownUser = null;
 
-  // --- Helpers ---
+  // Busy flags (disable buttons during calls)
+  let isEnrollBusy = false;
+  let isVerifyBusy = false;
+
+  // -----------------------------
+  // Helpers
+  // -----------------------------
   function emailToAlnumKey(email) {
     return (email || "").toLowerCase().replace(/[^a-z0-9]/g, "");
   }
@@ -42,6 +48,17 @@
     return lower.charAt(0).toUpperCase() + lower.slice(1);
   }
 
+  function formatLocalTime(dt) {
+    try {
+      return new Date(dt).toLocaleString();
+    } catch {
+      return dt;
+    }
+  }
+
+  // -----------------------------
+  // Auth UI
+  // -----------------------------
   function setAuthUI(user) {
     const isAuthed = !!user;
     const email = user?.userDetails || "";
@@ -65,7 +82,9 @@
     document.getElementById("logoutLinkInline").style.display = isAuthed ? "inline" : "none";
   }
 
-  // --- Dropdown behavior ---
+  // -----------------------------
+  // Dropdown behavior
+  // -----------------------------
   const avatarBtn = document.getElementById("avatarBtn");
   const userDropdown = document.getElementById("userDropdown");
 
@@ -86,10 +105,209 @@
     if (e.key === "Escape") closeDropdown();
   });
 
-  // ------------------------------------------------------------
-  // STATUS UI (already working) + keep lastKnownStatus updated
-  // ------------------------------------------------------------
+  // -----------------------------
+  // Step 8: Nice Confirm Modal (created dynamically)
+  // -----------------------------
+  function ensureModalStyles() {
+    if (document.getElementById("totpModalStyles")) return;
 
+    const style = document.createElement("style");
+    style.id = "totpModalStyles";
+    style.textContent = `
+      .modalOverlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(17,24,39,0.55);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+        z-index: 9999;
+      }
+      .modalOverlay.open { display: flex; }
+
+      .modalDialog {
+        width: min(520px, 100%);
+        background: var(--bg-card, #fff);
+        border: 1px solid var(--border, #e5e7eb);
+        border-radius: 14px;
+        box-shadow: 0 24px 60px rgba(0,0,0,0.25);
+        overflow: hidden;
+      }
+
+      .modalHeader {
+        padding: 16px 16px 12px;
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+        border-bottom: 1px solid var(--border, #e5e7eb);
+      }
+
+      .modalIcon {
+        width: 36px;
+        height: 36px;
+        border-radius: 12px;
+        display: grid;
+        place-items: center;
+        background: var(--warn-bg, #fffbeb);
+        color: var(--warn-text, #b45309);
+        font-size: 18px;
+        flex: 0 0 auto;
+      }
+
+      .modalTitle {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--text-main, #111827);
+      }
+
+      .modalBody {
+        padding: 12px 16px 16px;
+        color: var(--text-main, #111827);
+      }
+
+      .modalBody p {
+        margin: 0 0 10px 0;
+        color: var(--text-muted, #6b7280);
+        line-height: 1.45;
+      }
+
+      .modalActions {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        padding: 14px 16px 16px;
+        border-top: 1px solid var(--border, #e5e7eb);
+      }
+
+      .btnGhost {
+        padding: 9px 14px;
+        border-radius: 10px;
+        border: 1px solid var(--border, #e5e7eb);
+        background: #fff;
+        cursor: pointer;
+        font-weight: 600;
+      }
+
+      .btnDanger {
+        padding: 9px 14px;
+        border-radius: 10px;
+        border: 1px solid var(--err-text, #b91c1c);
+        background: var(--err-bg, #fef2f2);
+        color: var(--err-text, #b91c1c);
+        cursor: pointer;
+        font-weight: 700;
+      }
+
+      .btnDanger:hover { filter: brightness(0.98); }
+      .btnGhost:hover { background: #f9fafb; }
+    `;
+    document.head.appendChild(style);
+  }
+
+  function createConfirmModal() {
+    ensureModalStyles();
+
+    const overlay = document.createElement("div");
+    overlay.className = "modalOverlay";
+    overlay.setAttribute("role", "dialog");
+    overlay.setAttribute("aria-modal", "true");
+
+    overlay.innerHTML = `
+      <div class="modalDialog" role="document">
+        <div class="modalHeader">
+          <div class="modalIcon" aria-hidden="true">⚠️</div>
+          <div>
+            <h3 class="modalTitle" id="modalTitle">Confirm action</h3>
+          </div>
+        </div>
+        <div class="modalBody">
+          <p id="modalMessage">Are you sure?</p>
+        </div>
+        <div class="modalActions">
+          <button type="button" class="btnGhost" id="modalCancelBtn">Cancel</button>
+          <button type="button" class="btnDanger" id="modalConfirmBtn">Continue</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    const titleEl = overlay.querySelector("#modalTitle");
+    const msgEl = overlay.querySelector("#modalMessage");
+    const cancelBtn = overlay.querySelector("#modalCancelBtn");
+    const confirmBtn = overlay.querySelector("#modalConfirmBtn");
+
+    function open({ title, message, confirmText, cancelText }) {
+      titleEl.textContent = title || "Confirm action";
+      msgEl.textContent = message || "Are you sure?";
+      confirmBtn.textContent = confirmText || "Continue";
+      cancelBtn.textContent = cancelText || "Cancel";
+
+      overlay.classList.add("open");
+      // focus primary action
+      confirmBtn.focus();
+
+      return new Promise((resolve) => {
+        const cleanup = () => {
+          overlay.classList.remove("open");
+          confirmBtn.onclick = null;
+          cancelBtn.onclick = null;
+          overlay.onclick = null;
+          document.removeEventListener("keydown", onKeyDown, true);
+        };
+
+        const onKeyDown = (e) => {
+          if (e.key === "Escape") {
+            e.preventDefault();
+            cleanup();
+            resolve(false);
+          }
+        };
+
+        confirmBtn.onclick = () => {
+          cleanup();
+          resolve(true);
+        };
+
+        cancelBtn.onclick = () => {
+          cleanup();
+          resolve(false);
+        };
+
+        overlay.onclick = (e) => {
+          // click outside dialog closes
+          if (e.target === overlay) {
+            cleanup();
+            resolve(false);
+          }
+        };
+
+        document.addEventListener("keydown", onKeyDown, true);
+      });
+    }
+
+    return { open };
+  }
+
+  const confirmModal = createConfirmModal();
+
+  async function confirmReEnrollIfNeeded() {
+    if (lastKnownStatus !== "enrolled") return true;
+
+    return await confirmModal.open({
+      title: "Re-enroll and generate new QR?",
+      message:
+        "You are already enrolled.\n\nGenerating a new QR code will RESET your existing enrollment. Your previous authenticator setup will stop working.\n\nDo you want to continue?",
+      confirmText: "Yes, re-enroll",
+      cancelText: "Cancel"
+    });
+  }
+
+  // -----------------------------
+  // Step 6 status rendering + Step 9 button state updates
+  // -----------------------------
   function findStatusMessageElement() {
     const byId = document.getElementById("enrollmentStatusMsg");
     if (byId) return byId;
@@ -102,16 +320,7 @@
 
     const card = statusH2.closest(".card");
     if (!card) return null;
-
     return card.querySelector(".muted");
-  }
-
-  function formatLocalTime(dt) {
-    try {
-      return new Date(dt).toLocaleString();
-    } catch {
-      return dt;
-    }
   }
 
   function setStatusUI({ state, issuer, enrolledAt, detail }) {
@@ -129,30 +338,30 @@
       return;
     }
 
-    const lines = [];
+    const parts = [];
 
     if (state === "not_enrolled") {
-      lines.push("<span class='warn'>Not enrolled</span>");
-      lines.push("<span class='muted'>You haven’t completed TOTP enrollment yet.</span>");
+      parts.push("<span class='warn'>Not enrolled</span>");
+      parts.push("<span class='muted'>You haven’t completed TOTP enrollment yet.</span>");
     } else if (state === "pending") {
-      lines.push("<span class='warn'>Pending verification</span>");
-      lines.push("<span class='muted'>QR is generated. Please verify using a valid OTP.</span>");
+      parts.push("<span class='warn'>Pending verification</span>");
+      parts.push("<span class='muted'>QR is generated. Please verify using a valid OTP.</span>");
     } else if (state === "enrolled") {
-      lines.push("<span class='ok'>Enrolled</span>");
-      if (enrolledAt) lines.push(`<span class='muted'>Enrolled at: ${formatLocalTime(enrolledAt)}</span>`);
+      parts.push("<span class='ok'>Enrolled</span>");
+      if (enrolledAt) parts.push(`<span class='muted'>Enrolled at: ${formatLocalTime(enrolledAt)}</span>`);
     } else if (state === "error") {
-      lines.push("<span class='err'>Status check failed</span>");
-      if (detail) lines.push(`<span class='muted'>${detail}</span>`);
+      parts.push("<span class='err'>Status check failed</span>");
+      if (detail) parts.push(`<span class='muted'>${detail}</span>`);
     } else {
-      lines.push(`<span class='warn'>${state}</span>`);
-      if (detail) lines.push(`<span class='muted'>${detail}</span>`);
+      parts.push(`<span class='warn'>${state}</span>`);
+      if (detail) parts.push(`<span class='muted'>${detail}</span>`);
     }
 
     if (issuer && state !== "not_enrolled") {
-      lines.push(`<span class='muted'>Issuer: ${issuer}</span>`);
+      parts.push(`<span class='muted'>Issuer: ${issuer}</span>`);
     }
 
-    el.innerHTML = lines.join(" ");
+    el.innerHTML = parts.join(" ");
   }
 
   async function fetchEnrollmentStatus(employeeId) {
@@ -165,17 +374,44 @@
     return await res.json().catch(() => ({}));
   }
 
+  function setButtonsState({ user, status }) {
+    const startBtn = document.getElementById("startEnrollBtn");
+    const verifyBtn = document.getElementById("verifyBtn");
+
+    const isAuthed = !!user?.userDetails;
+    const s = status; // may be null if unknown
+
+    // Disable logic
+    startBtn.disabled = !isAuthed || isEnrollBusy;
+    verifyBtn.disabled = !isAuthed || isVerifyBusy || s !== "pending";
+
+    // Labels (Start button only)
+    if (!isAuthed) {
+      startBtn.textContent = "Login to Enroll";
+    } else if (s === "not_enrolled") {
+      startBtn.textContent = "Start Enrollment (Generate QR)";
+    } else if (s === "pending") {
+      startBtn.textContent = "Re-generate QR";
+    } else if (s === "enrolled") {
+      startBtn.textContent = "Re-enroll (Generate New QR)";
+    } else {
+      startBtn.textContent = "Start / Re-generate QR";
+    }
+  }
+
   async function refreshStatus(user) {
     try {
       if (!API) {
         lastKnownStatus = null;
         setStatusUI({ state: "error", detail: "API_BASE is not configured." });
+        setButtonsState({ user, status: lastKnownStatus });
         return;
       }
 
       if (!user?.userDetails) {
         lastKnownStatus = null;
         setStatusUI({ state: "anonymous" });
+        setButtonsState({ user, status: lastKnownStatus });
         return;
       }
 
@@ -183,6 +419,7 @@
       if (!employeeId) {
         lastKnownStatus = null;
         setStatusUI({ state: "error", detail: "Unable to derive employeeId from email." });
+        setButtonsState({ user, status: lastKnownStatus });
         return;
       }
 
@@ -193,7 +430,6 @@
       const issuer = data?.issuer || null;
       const enrolledAt = data?.enrolledAt || null;
 
-      // ✅ Keep in memory so Start Enrollment can guard re-enroll behavior
       if (status === "not_enrolled" || status === "pending" || status === "enrolled") {
         lastKnownStatus = status;
       } else {
@@ -214,43 +450,36 @@
           detail: "Unexpected status value returned by API."
         });
       }
+
+      setButtonsState({ user, status: lastKnownStatus });
     } catch (e) {
       console.error("refreshStatus error:", e);
       lastKnownStatus = null;
       setStatusUI({ state: "error", detail: e?.message || "Unknown error" });
+      setButtonsState({ user, status: lastKnownStatus });
     }
   }
 
-  // ------------------------------------------------------------
-  // ✅ Re-enroll confirmation guard (your request)
-  // ------------------------------------------------------------
-
-  function confirmReEnrollIfNeeded() {
-    // If we don't know status yet, allow action (enroll will handle errors)
-    if (lastKnownStatus !== "enrolled") return true;
-
-    // Show warning + prompt
-    const message =
-      "You are already enrolled.\n\n" +
-      "Generating a new QR code will RESET your existing enrollment (your previous authenticator setup will stop working).\n\n" +
-      "Do you want to continue and re-enroll?";
-
-    return window.confirm(message);
-  }
-
-  // ------------------------------------------------------------
-  // Enrollment + Verification + status refresh hooks
-  // ------------------------------------------------------------
-
+  // -----------------------------
+  // Enrollment + Verification (with status refresh hooks)
+  // -----------------------------
   async function startEnrollment() {
     const msg = document.getElementById("startEnrollMsg");
     const qrBlock = document.getElementById("qrBlock");
 
-    // ✅ guard: if enrolled, warn + confirm before overwriting
-    if (!confirmReEnrollIfNeeded()) {
+    if (isEnrollBusy) return;
+
+    // Step 8: modal confirm if enrolled
+    const allowed = await confirmReEnrollIfNeeded();
+    if (!allowed) {
       msg.innerHTML = "<span class='warn'>Re-enroll cancelled. Existing enrollment is unchanged.</span>";
       return;
     }
+
+    isEnrollBusy = true;
+
+    // Update buttons immediately
+    setButtonsState({ user: lastKnownUser, status: lastKnownStatus });
 
     qrBlock.classList.add("is-hidden");
     msg.textContent = "Starting…";
@@ -262,7 +491,7 @@
 
       if (!email) {
         msg.innerHTML = "<span class='err'>Not signed in. Please Login.</span>";
-        setStatusUI({ state: "anonymous" });
+        await refreshStatus(user);
         return;
       }
 
@@ -314,11 +543,14 @@
         msg.innerHTML = `<span class='ok'>QR generated for ${email}.</span>`;
       }
 
-      // After enroll, status should be "pending"
+      // After enroll, status should be pending
       await refreshStatus(user);
     } catch (e) {
       console.error(e);
       msg.innerHTML = "<span class='err'>Failed to start enrollment.</span>";
+    } finally {
+      isEnrollBusy = false;
+      setButtonsState({ user: lastKnownUser, status: lastKnownStatus });
     }
   }
 
@@ -327,10 +559,21 @@
     const otp = otpInput.value.trim();
     const msg = document.getElementById("verifyMsg");
 
+    if (isVerifyBusy) return;
+
+    // Step 9: verify should only be enabled when pending, but double-guard anyway
+    if (lastKnownStatus !== "pending") {
+      msg.innerHTML = "<span class='warn'>No pending enrollment to verify. Generate a QR first.</span>";
+      return;
+    }
+
     if (!/^\d{6}$/.test(otp)) {
       msg.innerHTML = "<span class='warn'>Enter a 6-digit OTP.</span>";
       return;
     }
+
+    isVerifyBusy = true;
+    setButtonsState({ user: lastKnownUser, status: lastKnownStatus });
 
     const user = await getUserInfo();
     lastKnownUser = user;
@@ -338,13 +581,17 @@
 
     if (!email) {
       msg.innerHTML = "<span class='err'>Not signed in. Please Login.</span>";
-      setStatusUI({ state: "anonymous" });
+      await refreshStatus(user);
+      isVerifyBusy = false;
+      setButtonsState({ user: lastKnownUser, status: lastKnownStatus });
       return;
     }
 
     const employeeId = emailToAlnumKey(email);
     if (!employeeId) {
       msg.innerHTML = "<span class='err'>Unable to derive identifier from email.</span>";
+      isVerifyBusy = false;
+      setButtonsState({ user: lastKnownUser, status: lastKnownStatus });
       return;
     }
 
@@ -375,14 +622,21 @@
       console.error(e);
       msg.innerHTML = "<span class='err'>Verification failed (network/error).</span>";
       await refreshStatus(user);
+    } finally {
+      isVerifyBusy = false;
+      setButtonsState({ user: lastKnownUser, status: lastKnownStatus });
     }
   }
 
-  // --- Wire up events ---
+  // -----------------------------
+  // Wire up events
+  // -----------------------------
   document.getElementById("startEnrollBtn").addEventListener("click", startEnrollment);
   document.getElementById("verifyBtn").addEventListener("click", verifyCode);
 
-  // --- Init ---
+  // -----------------------------
+  // Init
+  // -----------------------------
   (async () => {
     const user = await getUserInfo();
     lastKnownUser = user;
