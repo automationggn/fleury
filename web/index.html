@@ -15,17 +15,8 @@
 </head>
 
 <body>
-  <!-- Note to myself - remove it anytime to disable the flow --
-  <div class="app flow-enabled"></div> -->
-
-<div class="card step-complete">   <!-- Sign in -->
-<div class="card step-current">    <!-- Enrollment status -->
-<div class="card step-pending">    <!-- Start enrollment -->
-<div class="card step-pending">    <!-- Verify -->
-
-
-  <!-- Main App -->
-  <div class="app">
+  <!-- Enable flow by keeping this class -->
+  <div class="app flow-enabled">
 
     <!-- Top bar -->
     <div class="topbar">
@@ -71,48 +62,43 @@
     </div>
 
     <!-- Title -->
-    <div class="card center">
+    <div class="card">
       <h1 class="pageTitle">TOTP Self‑Service Enrollment</h1>
       <p class="pageSubtitle">Microsoft Authenticator enrollment</p>
     </div>
 
     <!-- Sign in -->
-    <div class="card center">
+    <div class="card step-complete" id="step-signin">
       <h2>Sign in</h2>
 
-      <div class="actions center">
+      <div class="actions">
         <a id="loginLinkInline" class="btnLike primary" href="/.auth/login/aad">Login</a>
         <a id="logoutLinkInline" class="btnLike primary" href="/.auth/logout">Logout</a>
       </div>
 
       <div class="divider"></div>
-
       <div><strong>User:</strong> <span id="userLine">—</span></div>
     </div>
 
     <!-- Status -->
-    <div class="card center">
+    <div class="card step-current" id="step-status">
       <h2>Enrollment status</h2>
 
-      <div id="enrollmentStatusText" class="muted">
-        Checking status…
-      </div>
+      <div id="enrollmentStatusText" class="muted">Checking status…</div>
 
-      <div class="statusToolsBar center">
+      <div class="statusToolsBar">
         <button id="refreshStatusBtn" class="primary miniBtn">Refresh status</button>
         <span id="lastCheckedText" class="statusToolsMuted">Last checked: —</span>
       </div>
     </div>
 
     <!-- Enroll -->
-    <div class="card center">
+    <div class="card step-pending" id="step-enroll">
       <h2>Start enrollment</h2>
 
-      <p class="muted">
-        Scan the QR code using Microsoft Authenticator.
-      </p>
+      <p class="muted">Scan the QR code using Microsoft Authenticator.</p>
 
-      <div class="actions center">
+      <div class="actions">
         <button id="startEnrollBtn" class="primary">Start / Re‑generate QR</button>
       </div>
 
@@ -123,14 +109,12 @@
     </div>
 
     <!-- Verify -->
-    <div class="card center">
+    <div class="card step-pending" id="step-verify">
       <h2>Verify</h2>
 
-      <p class="muted">
-        Enter the 6‑digit code from your authenticator app.
-      </p>
+      <p class="muted">Enter the 6‑digit code from your authenticator app.</p>
 
-      <div class="actions center">
+      <div class="actions">
         <input id="otpInput" maxlength="6" placeholder="6‑digit OTP" inputmode="numeric" />
         <button id="verifyBtn" class="primary">Verify</button>
       </div>

@@ -7,6 +7,14 @@
   let isEnrollBusy = false;
   let isVerifyBusy = false;
 
+  // Flow step elements
+  const flow = {
+    signin: null,
+    status: null,
+    enroll: null,
+    verify: null
+  };
+
   // -----------------------------
   // Helpers
   // -----------------------------
@@ -51,6 +59,90 @@
       return new Date(dt).toLocaleString();
     } catch {
       return dt;
+    }
+  }
+
+  // -----------------------------
+  // Fix broken stray cards in HTML
+  // -----------------------------
+  function cleanupBrokenTopCards() {
+    // Remove any .card.step-* that are direct children of body and not inside .app
+    const app = document.querySelector(".app");
+    document.querySelectorAll("body > .card.step-complete, body > .card.step-current, body > .card.step-pending")
+      .forEach(el => {
+        if (!app || !app.contains(el)) el.remove();
+      });
+  }
+
+  // -----------------------------
+  // Flow init + update
+  // -----------------------------
+  function initFlow() {
+    const app = document.querySelector(".app");
+    if (!app) return;
+
+    // Ensure flow-enabled is applied (even if HTML forgot)
+    app.classList.add("flow-enabled");
+
+    // Locate the four cards by their h2 text (robust against markup changes)
+    const cards = Array.from(app.querySelectorAll(".card"));
+    const findByH2 = (label) =>
+      cards.find(c => (c.querySelector("h2")?.textContent || "").trim().toLowerCase() === label);
+
+    flow.signin = findByH2("sign in");
+    flow.status = findByH2("enrollment status");
+    flow.enroll = findByH2("start enrollment");
+    flow.verify = findByH2("verify");
+
+    // Tag step cards only (title card stays untouched)
+    [flow.signin, flow.status, flow.enroll, flow.verify].forEach(el => {
+      if (!el) return;
+      el.classList.add("flow-step");
+      el.classList.remove("step-complete", "step-current", "step-pending");
+    });
+
+    if (flow.verify) flow.verify.classList.add("flow-last");
+
+    // Initial state
+    updateFlowSteps(false, null);
+  }
+
+  function setStep(el, state) {
+    if (!el) return;
+    el.classList.remove("step-complete", "step-current", "step-pending");
+    el.classList.add(state);
+  }
+
+  function updateFlowSteps(isAuthed, status) {
+    // When not signed in: sign-in current, others pending
+    if (!isAuthed) {
+      setStep(flow.signin, "step-current");
+      setStep(flow.status, "step-pending");
+      setStep(flow.enroll, "step-pending");
+      setStep(flow.verify, "step-pending");
+      return;
+    }
+
+    // Signed in: sign-in complete
+    setStep(flow.signin, "step-complete");
+
+    if (status === "not_enrolled" || !status) {
+      setStep(flow.status, "step-current");
+      setStep(flow.enroll, "step-pending");
+      setStep(flow.verify, "step-pending");
+    } else if (status === "pending") {
+      setStep(flow.status, "step-complete");
+      setStep(flow.enroll, "step-current");
+      setStep(flow.verify, "step-pending");
+    } else if (status === "enrolled") {
+      setStep(flow.status, "step-complete");
+      setStep(flow.enroll, "step-complete");
+      setStep(flow.verify, "step-current");
+    } else {
+      // Unknown: treat as status current
+      setStep(flow.status, "step-current");
+      setStep(flow.enroll, "step-pending");
+      setStep(flow.verify, "step-pending");
     }
   }
 
@@ -130,22 +222,9 @@
         }
       };
 
-      confirmBtn.onclick = () => {
-        cleanup();
-        resolve(true);
-      };
-
-      cancelBtn.onclick = () => {
-        cleanup();
-        resolve(false);
-      };
-
-      overlay.onclick = (e) => {
-        if (e.target === overlay) {
-          cleanup();
-          resolve(false);
-        }
-      };
+      confirmBtn.onclick = () => { cleanup(); resolve(true); };
+      cancelBtn.onclick = () => { cleanup(); resolve(false); };
+      overlay.onclick = (e) => { if (e.target === overlay) { cleanup(); resolve(false); } };
 
       document.addEventListener("keydown", onKeyDown, true);
     });
@@ -178,17 +257,19 @@
     document.getElementById("avatarCircle").textContent = ini;
     document.getElementById("avatarCircleMini").textContent = ini;
 
-    // ✅ Only user email line remains
     document.getElementById("userLine").textContent = isAuthed ? email : "—";
 
-    // Links visibility (dropdown)
+    // Dropdown visibility
     document.getElementById("loginLink").style.display = isAuthed ? "none" : "flex";
     document.getElementById("logoutLink").style.display = isAuthed ? "flex" : "none";
     document.getElementById("msProfileLink").style.display = isAuthed ? "flex" : "none";
 
-    // Links visibility (inline)
+    // Inline visibility
     document.getElementById("loginLinkInline").style.display = isAuthed ? "none" : "inline-block";
     document.getElementById("logoutLinkInline").style.display = isAuthed ? "inline-block" : "none";
+
+    // Update flow based on auth (status may not yet be known)
+    updateFlowSteps(isAuthed, lastKnownStatus);
   }
 
   // Dropdown behavior
@@ -271,9 +352,7 @@
     return await res.json().catch(() => ({}));
   }
 
-  // -----------------------------
-  // Buttons state (Verify always enabled + dynamic label)
-  // -----------------------------
+  // Buttons state
   function setButtonsState({ user, status }) {
     const startBtn = document.getElementById("startEnrollBtn");
     const verifyBtn = document.getElementById("verifyBtn");
@@ -302,6 +381,7 @@
         setStatusUI({ state: "error", detail: "API_BASE is not configured." });
         setButtonsState({ user, status: lastKnownStatus });
         updateLastChecked();
+        updateFlowSteps(!!user?.userDetails, lastKnownStatus);
         return;
       }
 
@@ -310,6 +390,7 @@
         setStatusUI({ state: "anonymous" });
         setButtonsState({ user, status: lastKnownStatus });
         updateLastChecked();
+        updateFlowSteps(false, lastKnownStatus);
         return;
       }
 
@@ -319,6 +400,7 @@
         setStatusUI({ state: "error", detail: "Unable to derive employeeId from email." });
         setButtonsState({ user, status: lastKnownStatus });
         updateLastChecked();
+        updateFlowSteps(true, lastKnownStatus);
         return;
       }
 
@@ -339,6 +421,7 @@
 
       setButtonsState({ user, status: lastKnownStatus });
       updateLastChecked();
+      updateFlowSteps(true, lastKnownStatus);
 
       if (opts.showToastOnSuccess) {
         showToast("success", "Status refreshed", `Current status: ${lastKnownStatus || "unknown"}`, 2400);
@@ -349,13 +432,12 @@
       setStatusUI({ state: "error", detail: e?.message || "Unknown error" });
       setButtonsState({ user, status: lastKnownStatus });
       updateLastChecked();
+      updateFlowSteps(!!user?.userDetails, lastKnownStatus);
       showToast("error", "Status error", e?.message || "Failed to refresh status.");
     }
   }
 
-  // -----------------------------
   // Enroll & Verify
-  // -----------------------------
   async function startEnrollment() {
     if (isEnrollBusy) return;
 
@@ -411,7 +493,6 @@
         return;
       }
 
-      // ✅ Only QR shown (no issuer, no otpauth URI)
       qrImg.src = qrUrl(data.otpauth);
       qrBlock.classList.remove("is-hidden");
 
@@ -451,7 +532,7 @@
       showToast(
         "warn",
         "Not enrolled yet",
-        "Status indicates you are not enrolled. You can still try OTP, but if it fails generate a QR first (or refresh status if you just enrolled).",
+        "Status indicates you are not enrolled. You can still try OTP, but if it fails generate a QR first.",
         5200
       );
     }
@@ -493,33 +574,43 @@
     }
   }
 
-  // -----------------------------
   // Init + Events
-  // -----------------------------
-  document.getElementById("startEnrollBtn").addEventListener("click", startEnrollment);
-  document.getElementById("verifyBtn").addEventListener("click", verifyCode);
+  function wireUp() {
+    cleanupBrokenTopCards();
+    initFlow();
 
-  const refreshBtn = document.getElementById("refreshStatusBtn");
-  if (refreshBtn) {
-    refreshBtn.addEventListener("click", async () => {
-      if (!lastKnownUser?.userDetails) {
-        showToast("warn", "Login required", "Sign in to refresh enrollment status.");
-        return;
-      }
-      showToast("info", "Refreshing", "Fetching latest enrollment status…", 2200);
-      await refreshStatus(lastKnownUser, { showToastOnSuccess: true });
-    });
+    document.getElementById("startEnrollBtn").addEventListener("click", startEnrollment);
+    document.getElementById("verifyBtn").addEventListener("click", verifyCode);
+
+    const refreshBtn = document.getElementById("refreshStatusBtn");
+    if (refreshBtn) {
+      refreshBtn.addEventListener("click", async () => {
+        if (!lastKnownUser?.userDetails) {
+          showToast("warn", "Login required", "Sign in to refresh enrollment status.");
+          return;
+        }
+        showToast("info", "Refreshing", "Fetching latest enrollment status…", 2200);
+        await refreshStatus(lastKnownUser, { showToastOnSuccess: true });
+      });
+    }
+
+    (async () => {
+      const user = await getUserInfo();
+      lastKnownUser = user;
+
+      setAuthUI(user);
+      await refreshStatus(user);
+
+      setButtonsState({ user: lastKnownUser, status: lastKnownStatus });
+    })();
   }
 
-  (async () => {
-    const user = await getUserInfo();
-    lastKnownUser = user;
-
-    setAuthUI(user);
-    await refreshStatus(user);
-
-    setButtonsState({ user: lastKnownUser, status: lastKnownStatus });
-  })();
+  // Run after DOM ready
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", wireUp);
+  } else {
+    wireUp();
+  }
 
   console.log("API BASE =", API);
 })();

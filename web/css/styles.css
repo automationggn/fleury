@@ -21,12 +21,33 @@
   --err-text: #b91c1c;
 }
 
+/* Optional Dark Mode (zero JS) */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-page: #0b1220;
+    --bg-card: #0f172a;
+    --border: #1f2937;
+
+    --text-main: #e5e7eb;
+    --text-muted: #9ca3af;
+
+    --primary: #3b82f6;
+
+    --success-bg: #052e16;
+    --success-text: #4ade80;
+
+    --warn-bg: #422006;
+    --warn-text: #facc15;
+
+    --err-bg: #450a0a;
+    --err-text: #f87171;
+  }
+}
+
 /* =========================================================
    RESET / BASE + SAFE AREA
 ========================================================= */
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 body {
   margin: 0;
@@ -48,9 +69,7 @@ body {
 /* =========================================================
    STATUS PILLS
 ========================================================= */
-.ok,
-.warn,
-.err {
+.ok, .warn, .err {
   display: inline-block;
   padding: 4px 10px;
   border-radius: 999px;
@@ -59,20 +78,9 @@ body {
   margin-right: 6px;
 }
 
-.ok {
-  background: var(--success-bg);
-  color: var(--success-text);
-}
-
-.warn {
-  background: var(--warn-bg);
-  color: var(--warn-text);
-}
-
-.err {
-  background: var(--err-bg);
-  color: var(--err-text);
-}
+.ok   { background: var(--success-bg); color: var(--success-text); }
+.warn { background: var(--warn-bg);    color: var(--warn-text); }
+.err  { background: var(--err-bg);     color: var(--err-text); }
 
 /* =========================================================
    TOP BAR
@@ -91,7 +99,7 @@ body {
   padding: 8px 14px;
   border-radius: 999px;
   border: 1px solid var(--border);
-  background: #fff;
+  background: var(--bg-card);
   font-size: 13px;
   font-weight: 700;
 }
@@ -104,7 +112,7 @@ body {
 }
 
 /* =========================================================
-   USER MENU
+   USER MENU + DROPDOWN
 ========================================================= */
 .userMenu {
   display: flex;
@@ -116,7 +124,7 @@ body {
 .authPill {
   font-size: 12px;
   color: var(--text-muted);
-  background: #fff;
+  background: var(--bg-card);
   border: 1px solid var(--border);
   padding: 6px 10px;
   border-radius: 999px;
@@ -127,7 +135,7 @@ body {
   height: 40px;
   border-radius: 999px;
   border: 1px solid var(--border);
-  background: #fff;
+  background: var(--bg-card);
   display: grid;
   place-items: center;
   cursor: pointer;
@@ -144,24 +152,21 @@ body {
   place-items: center;
 }
 
-/* Dropdown */
 .dropdown {
   position: absolute;
   top: 48px;
   right: 0;
   width: 260px;
-  background: #fff;
+  background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 14px;
-  box-shadow: 0 16px 40px rgba(0,0,0,0.12);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.22);
   padding: 10px;
   display: none;
   z-index: 20;
 }
 
-.dropdown.open {
-  display: block;
-}
+.dropdown.open { display: block; }
 
 .ddHeader {
   display: flex;
@@ -199,21 +204,19 @@ body {
   color: var(--text-main);
 }
 
-.ddItem:hover {
-  background: #f9fafb;
-}
+.ddItem:hover { background: rgba(127,127,127,0.08); }
 
 .ddIcon {
   width: 28px;
   height: 28px;
   border-radius: 10px;
-  background: #f3f4f6;
+  background: rgba(127,127,127,0.12);
   display: grid;
   place-items: center;
 }
 
 /* =========================================================
-   CARDS (LEFT ALIGNED)
+   CARDS
 ========================================================= */
 .card {
   background: var(--bg-card);
@@ -221,7 +224,7 @@ body {
   border-radius: 16px;
   padding: 18px 16px;
   margin-bottom: 16px;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.04);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.06);
 }
 
 .card h2 {
@@ -238,6 +241,16 @@ body {
 .pageSubtitle {
   margin: 0;
   color: var(--text-muted);
+}
+
+.center { text-align: center; } /* your HTML uses this */
+.actions.center { justify-content: center; } /* keep */
+.statusToolsBar.center { justify-content: center; } /* keep */
+
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 12px 0;
 }
 
 /* =========================================================
@@ -258,7 +271,7 @@ a.btnLike {
   padding: 12px 18px;
   border-radius: 12px;
   border: 1px solid var(--border);
-  background: #fff;
+  background: var(--bg-card);
   font-weight: 600;
   text-align: center;
   cursor: pointer;
@@ -293,25 +306,22 @@ input {
   border: 1px solid var(--border);
   font-size: 18px;
   text-align: center;
+  color: var(--text-main);
+  background: transparent;
 }
 
 /* =========================================================
    QR
 ========================================================= */
-.qrBlock {
-  margin-top: 16px;
-}
-
-.qrBlock.is-hidden {
-  display: none;
-}
+.qrBlock { margin-top: 16px; }
+.qrBlock.is-hidden { display: none; }
 
 .qr {
   width: 220px;
   height: 220px;
   border-radius: 16px;
   border: 1px solid var(--border);
-  background: #fff;
+  background: var(--bg-card);
 }
 
 /* =========================================================
@@ -326,9 +336,7 @@ input {
   font-size: 12px;
 }
 
-.statusToolsMuted {
-  color: var(--text-muted);
-}
+.statusToolsMuted { color: var(--text-muted); }
 
 /* =========================================================
    TOASTS (SAFE AREA)
@@ -345,14 +353,14 @@ input {
 }
 
 .toast {
-  background: #fff;
+  background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 12px;
   display: flex;
   gap: 10px;
   align-items: flex-start;
-  box-shadow: 0 16px 40px rgba(0,0,0,0.14);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.18);
   opacity: 0;
   transform: translateY(-6px);
   transition: opacity 150ms ease, transform 150ms ease;
@@ -369,11 +377,11 @@ input {
   border-radius: 10px;
   display: grid;
   place-items: center;
+  flex: 0 0 auto;
+  background: rgba(127,127,127,0.12);
 }
 
-.toastBody {
-  flex: 1;
-}
+.toastBody { flex: 1; }
 
 .toastTitle {
   font-size: 13px;
@@ -397,7 +405,7 @@ input {
 }
 
 /* =========================================================
-   MODAL (SAFE AREA)
+   MODAL
 ========================================================= */
 .modalOverlay {
   position: fixed;
@@ -409,13 +417,11 @@ input {
   z-index: 9999;
 }
 
-.modalOverlay.open {
-  display: flex;
-}
+.modalOverlay.open { display: flex; }
 
 .modalDialog {
   width: 100%;
-  background: #fff;
+  background: var(--bg-card);
   border-radius: 16px 16px 0 0;
   border: 1px solid var(--border);
   padding-bottom: env(safe-area-inset-bottom);
@@ -426,6 +432,7 @@ input {
   gap: 12px;
   padding: 16px;
   border-bottom: 1px solid var(--border);
+  align-items: center;
 }
 
 .modalIcon {
@@ -438,9 +445,7 @@ input {
   place-items: center;
 }
 
-.modalBody {
-  padding: 16px;
-}
+.modalBody { padding: 16px; }
 
 .modalActions {
   display: flex;
@@ -450,10 +455,7 @@ input {
   border-top: 1px solid var(--border);
 }
 
-.btnGhost {
-  background: #fff;
-}
-
+.btnGhost { background: var(--bg-card); }
 .btnDanger {
   background: var(--err-bg);
   color: var(--err-text);
@@ -468,116 +470,34 @@ input {
     max-width: 760px;
     margin: 0 auto;
   }
-
   .topbar {
     flex-direction: row;
     justify-content: space-between;
   }
-
   .actions {
     flex-direction: row;
   }
-
   .modalOverlay {
     align-items: center;
   }
-
   .modalDialog {
     width: 520px;
     border-radius: 16px;
   }
 }
-/* =========================================================
-   OPTIONAL VISUAL FLOW (SAFE, ADDITIVE)
-   Enable by adding .flow-enabled to .app
-========================================================= */
-
-.flow-enabled {
-  position: relative;
-}
-
-/* Vertical flow line */
-.flow-enabled::before {
-  content: "";
-  position: absolute;
-  top: 180px;               /* starts below title card */
-  left: 18px;
-  bottom: 32px;
-  width: 2px;
-  background: var(--border);
-}
-
-/* Cards participate in flow */
-.flow-enabled .card {
-  position: relative;
-  margin-left: 36px;        /* creates space for line */
-}
-
-/* Flow step dot */
-.flow-enabled .card::before {
-  content: "";
-  position: absolute;
-  left: -36px;
-  top: 22px;
-  width: 14px;
-  height: 14px;
-  border-radius: 999px;
-  background: var(--primary);
-  box-shadow: 0 0 0 4px var(--bg-page);
-}
-
-/* Title card does NOT get a dot */
-.flow-enabled .card:first-of-type::before {
-  display: none;
-}
 
 /* =========================================================
-   MOBILE SAFETY
+   FLOW (ENTERPRISE SAFE, NO :has)
+   JS adds: flow-enabled to .app
+   JS tags step cards: .flow-step + step-(pending/current/complete)
 ========================================================= */
-@media (max-width: 480px) {
-  .flow-enabled::before {
-    left: 12px;
-  }
-
-  .flow-enabled .card {
-    margin-left: 28px;
-  }
-
-  .flow-enabled .card::before {
-    left: -28px;
-  }
-}
-
-/* =========================================================
-   OPTIONAL FLOW ENHANCEMENTS
-   (Green dots, current step, animation)
-========================================================= */
-
-/* -----------------------------------------
-   Base flow (safe, additive)
------------------------------------------- */
-.flow-enabled {
-  position: relative;
-}
-
-.flow-enabled::before {
-  content: "";
-  position: absolute;
-  top: 190px;
-  left: 18px;
-  bottom: 40px;
-  width: 2px;
-  background: var(--border);
-}
-
-/* Space cards for flow */
-.flow-enabled .card {
+.flow-enabled .flow-step {
   position: relative;
   margin-left: 36px;
 }
 
-/* Step dot */
-.flow-enabled .card::before {
+/* Dot */
+.flow-enabled .flow-step::before {
   content: "";
   position: absolute;
   left: -36px;
@@ -587,181 +507,50 @@ input {
   border-radius: 999px;
   background: var(--border);
   box-shadow: 0 0 0 4px var(--bg-page);
-  transition:
-    background-color 300ms ease,
-    box-shadow 300ms ease,
-    transform 300ms ease;
+  transition: all 280ms ease;
 }
 
-/* Title card does not participate */
-.flow-enabled .card:first-of-type::before {
-  display: none;
-}
-
-/* -----------------------------------------
-   CURRENT STEP HIGHLIGHT
------------------------------------------- */
-/* The card that contains focusable elements is current */
-.flow-enabled .card:focus-within::before {
-  background: var(--primary);
-  transform: scale(1.15);
-  box-shadow: 0 0 0 6px rgba(37,99,235,0.25);
-}
-
-/* -----------------------------------------
-   STATUS‑DRIVEN DOT COLOR
------------------------------------------- */
-/* When enrolled → dot turns green */
-.flow-enabled .card:has(.ok)::before {
-  background: var(--success-text);
-}
-
-/* Pending / warning */
-.flow-enabled .card:has(.warn)::before {
-  background: var(--warn-text);
-}
-
-/* Error */
-.flow-enabled .card:has(.err)::before {
-  background: var(--err-text);
-}
-
-/* -----------------------------------------
-   FLOW LINE PROGRESSION
------------------------------------------- */
-/* Line fills to current step */
-.flow-enabled .card:has(.ok)::after {
+/* Connector line (down to next step) */
+.flow-enabled .flow-step::after {
   content: "";
   position: absolute;
-  left: -35px;
-  top: -999px;
-  bottom: 22px;
+  left: -30px;
+  top: 38px;
   width: 2px;
-  background: linear-gradient(
-    to bottom,
-    var(--success-text),
-    var(--success-text)
-  );
-  animation: flowFill 600ms ease-out forwards;
-}
-
-@keyframes flowFill {
-  from {
-    transform: scaleY(0);
-    transform-origin: top;
-  }
-  to {
-    transform: scaleY(1);
-    transform-origin: top;
-  }
-}
-
-/* -----------------------------------------
-   MOBILE SAFETY
------------------------------------------- */
-@media (max-width: 480px) {
-  .flow-enabled::before {
-    left: 12px;
-  }
-
-  .flow-enabled .card {
-    margin-left: 28px;
-  }
-
-  .flow-enabled .card::before {
-    left: -28px;
-  }
-}
-
-/* =========================================================
-   ENTERPRISE-SAFE FLOW SYSTEM (NO :has)
-========================================================= */
-
-.flow-enabled {
-  position: relative;
-}
-
-/* Vertical line */
-.flow-enabled::before {
-  content: "";
-  position: absolute;
-  top: 180px;
-  left: 18px;
-  bottom: 40px;
-  width: 2px;
+  height: calc(100% + 16px);
   background: var(--border);
 }
 
-/* Space cards */
-.flow-enabled .card {
-  position: relative;
-  margin-left: 36px;
-}
-
-/* Base dot */
-.flow-enabled .card::before {
-  content: "";
-  position: absolute;
-  left: -36px;
-  top: 22px;
-  width: 14px;
-  height: 14px;
-  border-radius: 999px;
-  background: var(--border);
-  box-shadow: 0 0 0 4px var(--bg-page);
-  transition: all 300ms ease;
-}
-
-/* Do not mark title card */
-.flow-enabled .card:first-of-type::before {
+/* Last step has no connector */
+.flow-enabled .flow-step.flow-last::after {
   display: none;
 }
 
-/* =========================================================
-   STEP STATES
-========================================================= */
-
-/* ✅ Completed */
-.flow-enabled .card.step-complete::before {
+/* States */
+.flow-enabled .flow-step.step-complete::before {
   background: var(--success-text);
-  box-shadow: 0 0 0 4px var(--bg-page);
 }
 
-/* 🔵 Current */
-.flow-enabled .card.step-current::before {
+.flow-enabled .flow-step.step-current::before {
   background: var(--primary);
   transform: scale(1.25);
   box-shadow: 0 0 0 6px rgba(37,99,235,0.25);
   animation: pulseStep 1.6s infinite;
 }
 
-/* ⏳ Pending */
-.flow-enabled .card.step-pending::before {
+.flow-enabled .flow-step.step-pending::before {
   background: var(--border);
 }
 
-/* =========================================================
-   ANIMATION
-========================================================= */
 @keyframes pulseStep {
   0%   { box-shadow: 0 0 0 6px rgba(37,99,235,0.25); }
   70%  { box-shadow: 0 0 0 12px rgba(37,99,235,0); }
   100% { box-shadow: 0 0 0 6px rgba(37,99,235,0); }
 }
 
-/* =========================================================
-   MOBILE SAFETY
-========================================================= */
+/* Mobile flow spacing */
 @media (max-width: 480px) {
-  .flow-enabled::before {
-    left: 12px;
-  }
-
-  .flow-enabled .card {
-    margin-left: 28px;
-  }
-
-  .flow-enabled .card::before {
-    left: -28px;
-  }
+  .flow-enabled .flow-step { margin-left: 28px; }
+  .flow-enabled .flow-step::before { left: -28px; }
+  .flow-enabled .flow-step::after  { left: -22px; }
 }
