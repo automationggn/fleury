@@ -547,3 +547,128 @@ input {
     left: -28px;
   }
 }
+
+/* =========================================================
+   OPTIONAL FLOW ENHANCEMENTS
+   (Green dots, current step, animation)
+========================================================= */
+
+/* -----------------------------------------
+   Base flow (safe, additive)
+------------------------------------------ */
+.flow-enabled {
+  position: relative;
+}
+
+.flow-enabled::before {
+  content: "";
+  position: absolute;
+  top: 190px;
+  left: 18px;
+  bottom: 40px;
+  width: 2px;
+  background: var(--border);
+}
+
+/* Space cards for flow */
+.flow-enabled .card {
+  position: relative;
+  margin-left: 36px;
+}
+
+/* Step dot */
+.flow-enabled .card::before {
+  content: "";
+  position: absolute;
+  left: -36px;
+  top: 22px;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--border);
+  box-shadow: 0 0 0 4px var(--bg-page);
+  transition:
+    background-color 300ms ease,
+    box-shadow 300ms ease,
+    transform 300ms ease;
+}
+
+/* Title card does not participate */
+.flow-enabled .card:first-of-type::before {
+  display: none;
+}
+
+/* -----------------------------------------
+   CURRENT STEP HIGHLIGHT
+------------------------------------------ */
+/* The card that contains focusable elements is current */
+.flow-enabled .card:focus-within::before {
+  background: var(--primary);
+  transform: scale(1.15);
+  box-shadow: 0 0 0 6px rgba(37,99,235,0.25);
+}
+
+/* -----------------------------------------
+   STATUS‑DRIVEN DOT COLOR
+------------------------------------------ */
+/* When enrolled → dot turns green */
+.flow-enabled .card:has(.ok)::before {
+  background: var(--success-text);
+}
+
+/* Pending / warning */
+.flow-enabled .card:has(.warn)::before {
+  background: var(--warn-text);
+}
+
+/* Error */
+.flow-enabled .card:has(.err)::before {
+  background: var(--err-text);
+}
+
+/* -----------------------------------------
+   FLOW LINE PROGRESSION
+------------------------------------------ */
+/* Line fills to current step */
+.flow-enabled .card:has(.ok)::after {
+  content: "";
+  position: absolute;
+  left: -35px;
+  top: -999px;
+  bottom: 22px;
+  width: 2px;
+  background: linear-gradient(
+    to bottom,
+    var(--success-text),
+    var(--success-text)
+  );
+  animation: flowFill 600ms ease-out forwards;
+}
+
+@keyframes flowFill {
+  from {
+    transform: scaleY(0);
+    transform-origin: top;
+  }
+  to {
+    transform: scaleY(1);
+    transform-origin: top;
+  }
+}
+
+/* -----------------------------------------
+   MOBILE SAFETY
+------------------------------------------ */
+@media (max-width: 480px) {
+  .flow-enabled::before {
+    left: 12px;
+  }
+
+  .flow-enabled .card {
+    margin-left: 28px;
+  }
+
+  .flow-enabled .card::before {
+    left: -28px;
+  }
+}
