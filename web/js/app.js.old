@@ -1,10 +1,6 @@
 (() => {
   const API = window.APP_CONFIG?.API_BASE;
 
-  // Keeps last known backend status for decision-making (e.g., re-enroll guard)
-  let lastKnownStatus = null; // "not_enrolled" | "pending" | "enrolled" | null
-  let lastKnownUser = null;
-
   // --- Helpers ---
   function emailToAlnumKey(email) {
     return (email || "").toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -46,21 +42,28 @@
     const isAuthed = !!user;
     const email = user?.userDetails || "";
 
+    // Org name
     document.getElementById("orgNameText").textContent = isAuthed ? orgFromEmail(email) : "—";
+
+    // Auth pill + dropdown email
     document.getElementById("authState").textContent = isAuthed ? "Authenticated" : "Anonymous";
     document.getElementById("ddEmail").textContent = isAuthed ? email : "Not signed in";
 
+    // Avatar initials
     const ini = isAuthed ? initialsFromEmail(email) : "?";
     document.getElementById("avatarCircle").textContent = ini;
     document.getElementById("avatarCircleMini").textContent = ini;
 
+    // Inline card fields
     document.getElementById("userLine").textContent = isAuthed ? email : "—";
     document.getElementById("rolesLine").textContent = isAuthed ? (user.userRoles || []).join(", ") : "—";
 
+    // Links visibility (dropdown)
     document.getElementById("loginLink").style.display = isAuthed ? "none" : "flex";
     document.getElementById("logoutLink").style.display = isAuthed ? "flex" : "none";
     document.getElementById("msProfileLink").style.display = isAuthed ? "flex" : "none";
 
+    // Links visibility (inline)
     document.getElementById("loginLinkInline").style.display = isAuthed ? "none" : "inline";
     document.getElementById("logoutLinkInline").style.display = isAuthed ? "inline" : "none";
   }
@@ -87,22 +90,25 @@
   });
 
   // ------------------------------------------------------------
-  // STATUS UI (already working) + keep lastKnownStatus updated
+  // ✅ STATUS UI (Step 6)
   // ------------------------------------------------------------
 
   function findStatusMessageElement() {
+    // If you later add an ID in HTML, we support it automatically:
     const byId = document.getElementById("enrollmentStatusMsg");
     if (byId) return byId;
 
+    // Current HTML has no ID. Find card by its h2 text and update its first ".muted".
     const headings = Array.from(document.querySelectorAll("h2"));
-    const statusH2 = headings.find(
-      (h) => (h.textContent || "").trim().toLowerCase() === "2) enrollment status"
+    const statusH2 = headings.find((h) =>
+      (h.textContent || "").trim().toLowerCase() === "2) enrollment status"
     );
     if (!statusH2) return null;
 
     const card = statusH2.closest(".card");
     if (!card) return null;
 
+    // the status card contains a single div.muted right now
     return card.querySelector(".muted");
   }
 
@@ -114,9 +120,14 @@
     }
   }
 
-  function setStatusUI({ state, issuer, enrolledAt, detail }) {
+  function setStatusUI({ state, issuer, enrolledAt, detail, tone }) {
     const el = findStatusMessageElement();
     if (!el) return;
+
+    // tone => ok | warn | err | muted
+    const badgeClass = tone === "muted" ? "muted" : tone;
+
+    const lines = [];
 
     if (state === "loading") {
       el.textContent = "Checking status…";
@@ -124,12 +135,9 @@
     }
 
     if (state === "anonymous") {
-      el.innerHTML =
-        "<span class='warn'>Login required</span> <span class='muted'>Sign in to view enrollment status.</span>";
+      el.innerHTML = "<span class='warn'>Login required</span> <span class='muted'>Sign in to view enrollment status.</span>";
       return;
     }
-
-    const lines = [];
 
     if (state === "not_enrolled") {
       lines.push("<span class='warn'>Not enrolled</span>");
@@ -139,15 +147,18 @@
       lines.push("<span class='muted'>QR is generated. Please verify using a valid OTP.</span>");
     } else if (state === "enrolled") {
       lines.push("<span class='ok'>Enrolled</span>");
-      if (enrolledAt) lines.push(`<span class='muted'>Enrolled at: ${formatLocalTime(enrolledAt)}</span>`);
+      if (enrolledAt) {
+        lines.push(`<span class='muted'>Enrolled at: ${formatLocalTime(enrolledAt)}</span>`);
+      }
     } else if (state === "error") {
       lines.push("<span class='err'>Status check failed</span>");
       if (detail) lines.push(`<span class='muted'>${detail}</span>`);
     } else {
-      lines.push(`<span class='warn'>${state}</span>`);
+      lines.push(`<span class='${badgeClass}'>${state}</span>`);
       if (detail) lines.push(`<span class='muted'>${detail}</span>`);
     }
 
+    // issuer optional
     if (issuer && state !== "not_enrolled") {
       lines.push(`<span class='muted'>Issuer: ${issuer}</span>`);
     }
@@ -158,6 +169,8 @@
   async function fetchEnrollmentStatus(employeeId) {
     const url = `${API}/api/status?employeeId=${encodeURIComponent(employeeId)}`;
     const res = await fetch(url, { method: "GET" });
+
+    // status API should return 200 always for normal flow; handle unexpected responses
     if (!res.ok) {
       const text = await res.text().catch(() => "");
       throw new Error(`HTTP ${res.status} ${text}`.trim());
@@ -168,101 +181,69 @@
   async function refreshStatus(user) {
     try {
       if (!API) {
-        lastKnownStatus = null;
-        setStatusUI({ state: "error", detail: "API_BASE is not configured." });
+        setStatusUI({ state: "error", detail: "API_BASE is not configured.", tone: "err" });
         return;
       }
 
       if (!user?.userDetails) {
-        lastKnownStatus = null;
-        setStatusUI({ state: "anonymous" });
+        setStatusUI({ state: "anonymous", tone: "warn" });
         return;
       }
 
       const employeeId = emailToAlnumKey(user.userDetails);
       if (!employeeId) {
-        lastKnownStatus = null;
-        setStatusUI({ state: "error", detail: "Unable to derive employeeId from email." });
+        setStatusUI({ state: "error", detail: "Unable to derive employeeId from email.", tone: "err" });
         return;
       }
 
       setStatusUI({ state: "loading" });
 
       const data = await fetchEnrollmentStatus(employeeId);
+
       const status = (data?.status || "").toLowerCase();
       const issuer = data?.issuer || null;
       const enrolledAt = data?.enrolledAt || null;
 
-      // ✅ Keep in memory so Start Enrollment can guard re-enroll behavior
-      if (status === "not_enrolled" || status === "pending" || status === "enrolled") {
-        lastKnownStatus = status;
-      } else {
-        lastKnownStatus = null;
-      }
-
       if (status === "not_enrolled") {
-        setStatusUI({ state: "not_enrolled", issuer: null, enrolledAt: null });
+        setStatusUI({ state: "not_enrolled", issuer: null, enrolledAt: null, tone: "warn" });
       } else if (status === "pending") {
-        setStatusUI({ state: "pending", issuer, enrolledAt: null });
+        setStatusUI({ state: "pending", issuer, enrolledAt: null, tone: "warn" });
       } else if (status === "enrolled") {
-        setStatusUI({ state: "enrolled", issuer, enrolledAt });
+        setStatusUI({ state: "enrolled", issuer, enrolledAt, tone: "ok" });
       } else {
+        // Unknown status from backend
         setStatusUI({
           state: status || "unknown",
           issuer,
           enrolledAt,
-          detail: "Unexpected status value returned by API."
+          detail: "Unexpected status value returned by API.",
+          tone: "warn"
         });
       }
     } catch (e) {
       console.error("refreshStatus error:", e);
-      lastKnownStatus = null;
-      setStatusUI({ state: "error", detail: e?.message || "Unknown error" });
+      setStatusUI({ state: "error", detail: e?.message || "Unknown error", tone: "err" });
     }
   }
 
   // ------------------------------------------------------------
-  // ✅ Re-enroll confirmation guard (your request)
-  // ------------------------------------------------------------
-
-  function confirmReEnrollIfNeeded() {
-    // If we don't know status yet, allow action (enroll will handle errors)
-    if (lastKnownStatus !== "enrolled") return true;
-
-    // Show warning + prompt
-    const message =
-      "You are already enrolled.\n\n" +
-      "Generating a new QR code will RESET your existing enrollment (your previous authenticator setup will stop working).\n\n" +
-      "Do you want to continue and re-enroll?";
-
-    return window.confirm(message);
-  }
-
-  // ------------------------------------------------------------
-  // Enrollment + Verification + status refresh hooks
+  // Enrollment + Verification (existing) + status refresh hooks
   // ------------------------------------------------------------
 
   async function startEnrollment() {
     const msg = document.getElementById("startEnrollMsg");
     const qrBlock = document.getElementById("qrBlock");
 
-    // ✅ guard: if enrolled, warn + confirm before overwriting
-    if (!confirmReEnrollIfNeeded()) {
-      msg.innerHTML = "<span class='warn'>Re-enroll cancelled. Existing enrollment is unchanged.</span>";
-      return;
-    }
-
     qrBlock.classList.add("is-hidden");
     msg.textContent = "Starting…";
 
     try {
       const user = await getUserInfo();
-      lastKnownUser = user;
       const email = user?.userDetails;
 
       if (!email) {
         msg.innerHTML = "<span class='err'>Not signed in. Please Login.</span>";
-        setStatusUI({ state: "anonymous" });
+        setStatusUI({ state: "anonymous", tone: "warn" });
         return;
       }
 
@@ -289,6 +270,7 @@
       if (!res.ok) {
         const text = await res.text();
         msg.innerHTML = `<span class='err'>Enroll failed: ${res.status} ${text}</span>`;
+        // refresh status anyway (might remain not_enrolled)
         await refreshStatus(user);
         return;
       }
@@ -306,15 +288,9 @@
       document.getElementById("qrImg").src = qrUrl(data.otpauth);
 
       qrBlock.classList.remove("is-hidden");
+      msg.innerHTML = `<span class='ok'>QR generated for ${email}.</span>`;
 
-      // Message depends on whether this was a re-enroll
-      if (lastKnownStatus === "enrolled") {
-        msg.innerHTML = `<span class='ok'>New QR generated for ${email}. Please verify to complete re-enrollment.</span>`;
-      } else {
-        msg.innerHTML = `<span class='ok'>QR generated for ${email}.</span>`;
-      }
-
-      // After enroll, status should be "pending"
+      // ✅ After successful enroll, status should become "pending"
       await refreshStatus(user);
     } catch (e) {
       console.error(e);
@@ -333,12 +309,11 @@
     }
 
     const user = await getUserInfo();
-    lastKnownUser = user;
     const email = user?.userDetails;
 
     if (!email) {
       msg.innerHTML = "<span class='err'>Not signed in. Please Login.</span>";
-      setStatusUI({ state: "anonymous" });
+      setStatusUI({ state: "anonymous", tone: "warn" });
       return;
     }
 
@@ -370,6 +345,7 @@
         console.log("Verify response:", data);
       }
 
+      // ✅ Refresh status after verify (success should become "enrolled")
       await refreshStatus(user);
     } catch (e) {
       console.error(e);
@@ -378,14 +354,13 @@
     }
   }
 
-  // --- Wire up events ---
+  // --- Wire up events safely ---
   document.getElementById("startEnrollBtn").addEventListener("click", startEnrollment);
   document.getElementById("verifyBtn").addEventListener("click", verifyCode);
 
   // --- Init ---
   (async () => {
     const user = await getUserInfo();
-    lastKnownUser = user;
     setAuthUI(user);
     await refreshStatus(user);
   })();
