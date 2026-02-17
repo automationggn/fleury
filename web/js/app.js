@@ -461,31 +461,44 @@
   // ✅ CHANGE #1: Verify button enabled regardless of status
   // -----------------------------
   function setButtonsState({ user, status }) {
-    const startBtn = document.getElementById("startEnrollBtn");
-    const verifyBtn = document.getElementById("verifyBtn");
+  const startBtn = document.getElementById("startEnrollBtn");
+  const verifyBtn = document.getElementById("verifyBtn");
 
-    const isAuthed = !!user?.userDetails;
+  const isAuthed = !!user?.userDetails;
 
-    startBtn.disabled = !isAuthed || isEnrollBusy;
+  startBtn.disabled = !isAuthed || isEnrollBusy;
 
-    // ✅ Verify should be enabled whenever user is authed (unless busy)
-    verifyBtn.disabled = !isAuthed || isVerifyBusy;
+  // Verify stays enabled whenever authed (unless busy)
+  verifyBtn.disabled = !isAuthed || isVerifyBusy;
 
-    if (!isAuthed) {
-      startBtn.textContent = "Login to Enroll";
-    } else if (status === "not_enrolled") {
-      startBtn.textContent = "Start Enrollment (Generate QR)";
-    } else if (status === "pending") {
-      startBtn.textContent = "Re-generate QR";
-    } else if (status === "enrolled") {
-      startBtn.textContent = "Re-enroll (Generate New QR)";
-    } else {
-      startBtn.textContent = "Start / Re-generate QR";
-    }
-
-    // Optional: keep verify label stable
-    verifyBtn.textContent = isVerifyBusy ? "Verifying…" : "Verify";
+  // Start button labels (unchanged)
+  if (!isAuthed) {
+    startBtn.textContent = "Login to Enroll";
+  } else if (status === "not_enrolled") {
+    startBtn.textContent = "Start Enrollment (Generate QR)";
+  } else if (status === "pending") {
+    startBtn.textContent = "Re-generate QR";
+  } else if (status === "enrolled") {
+    startBtn.textContent = "Re-enroll (Generate New QR)";
+  } else {
+    startBtn.textContent = "Start / Re-generate QR";
   }
+
+  // ✅ Dynamic Verify label
+  if (!isAuthed) {
+    verifyBtn.textContent = "Login to Verify";
+  } else if (isVerifyBusy) {
+    verifyBtn.textContent = "Verifying…";
+  } else if (status === "pending") {
+    verifyBtn.textContent = "Complete Verification";
+  } else if (status === "enrolled") {
+    verifyBtn.textContent = "Check OTP";
+  } else if (status === "not_enrolled") {
+    verifyBtn.textContent = "Check OTP";
+  } else {
+    verifyBtn.textContent = "Verify";
+  }
+}
 
   async function refreshStatus(user, opts = {}) {
     try {
