@@ -454,12 +454,17 @@
       return (a + b).toUpperCase();
     }
 
-    // Org name: after "@" and before ".com"
+    // Org name: after "@" and before ".com" or any other "." if present beffore it.
     function orgFromEmail(email) {
-      if (!email || !email.includes("@")) return "—";
-      const domain = (email.split("@")[1] || "").toLowerCase();
-      const beforeCom = domain.split(".com")[0];
-      return beforeCom || "—";
+        if (!email || !email.includes("@")) return "—";   
+        const domain = (email.split("@")[1] || "").trim();
+        if(!domain) return "—";
+
+        // Take only the first label before the first dot
+        const firstLabel = domain.split(".")[0] || "";
+        if (!firstLabel) return "—";
+        const lower = firstLabel.toLowerCase();
+        return lower.charAt(0).toUpperCase() + lower.slice(1);
     }
 
     function setAuthUI(user) {
