@@ -1,89 +1,132 @@
-/* =========================================================
-   DESIGN TOKENS
-========================================================= */
+/* =====================================================================
+   GLOBAL DESIGN TOKENS
+   ---------------------------------------------------------------------
+   These variables define the color system, typography anchors,
+   and semantic meaning used throughout the application.
+   ===================================================================== */
 :root {
+
+  /* ---------- Base surfaces ---------- */
   --bg-page: #f3f4f6;
   --bg-card: #ffffff;
-  --border: #e5e7eb;
+  --border:  #e5e7eb;
 
-  --text-main: #111827;
+  /* ---------- Text colors ---------- */
+  --text-main:  #111827;
   --text-muted: #6b7280;
 
+  /* ---------- Brand / primary ---------- */
   --primary: #2563eb;
 
-  --success-bg: #ecfdf5;
+  /* ---------- Status colors ---------- */
+  --success-bg:   #ecfdf5;
   --success-text: #047857;
 
-  --warn-bg: #fffbeb;
+  --warn-bg:   #fffbeb;
   --warn-text: #b45309;
 
-  --err-bg: #fef2f2;
+  --err-bg:   #fef2f2;
   --err-text: #b91c1c;
 }
 
-/* Dark mode */
+/* =====================================================================
+   DARK MODE TOKENS (OS‑DRIVEN, ZERO JS)
+   ---------------------------------------------------------------------
+   Automatically applied when the operating system requests dark mode.
+   ===================================================================== */
 @media (prefers-color-scheme: dark) {
   :root {
     --bg-page: #0b1220;
     --bg-card: #0f172a;
-    --border: #1f2937;
+    --border:  #1f2937;
 
-    --text-main: #e5e7eb;
+    --text-main:  #e5e7eb;
     --text-muted: #9ca3af;
 
     --primary: #3b82f6;
 
-    --success-bg: #052e16;
+    --success-bg:   #052e16;
     --success-text: #4ade80;
 
-    --warn-bg: #422006;
+    --warn-bg:   #422006;
     --warn-text: #facc15;
 
-    --err-bg: #450a0a;
+    --err-bg:   #450a0a;
     --err-text: #f87171;
   }
 }
 
-/* =========================================================
-   RESET / BASE + SAFE AREA
-========================================================= */
-* { box-sizing: border-box; }
+/* =====================================================================
+   CSS RESET & BASE ELEMENT NORMALIZATION
+   ===================================================================== */
+* {
+  box-sizing: border-box;
+}
 
 body {
   margin: 0;
+  padding: 0;
+
   background: var(--bg-page);
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
   color: var(--text-main);
+
+  font-family:
+    system-ui,
+    -apple-system,
+    Segoe UI,
+    Roboto,
+    sans-serif;
+
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
+/* =====================================================================
+   APPLICATION ROOT + SAFE AREA HANDLING (iOS)
+   ===================================================================== */
 .app {
   width: 100%;
-  padding:
-    calc(16px + env(safe-area-inset-top))
-    calc(14px + env(safe-area-inset-right))
-    calc(48px + env(safe-area-inset-bottom))
-    calc(14px + env(safe-area-inset-left));
+
+  padding-top:    calc(16px + env(safe-area-inset-top));
+  padding-right:  calc(14px + env(safe-area-inset-right));
+  padding-bottom: calc(48px + env(safe-area-inset-bottom));
+  padding-left:   calc(14px + env(safe-area-inset-left));
 }
 
-/* =========================================================
-   STATUS PILLS
-========================================================= */
-.ok, .warn, .err {
+/* =====================================================================
+   STATUS PILLS (ENROLLED / PENDING / ERROR)
+   ===================================================================== */
+.ok,
+.warn,
+.err {
   display: inline-block;
+
   padding: 4px 10px;
   border-radius: 999px;
+
   font-size: 12px;
   font-weight: 700;
+  line-height: 1;
 }
 
-.ok   { background: var(--success-bg); color: var(--success-text); }
-.warn { background: var(--warn-bg);    color: var(--warn-text); }
-.err  { background: var(--err-bg);     color: var(--err-text); }
+.ok {
+  background: var(--success-bg);
+  color:      var(--success-text);
+}
 
-/* =========================================================
-   TOP BAR
-========================================================= */
+.warn {
+  background: var(--warn-bg);
+  color:      var(--warn-text);
+}
+
+.err {
+  background: var(--err-bg);
+  color:      var(--err-text);
+}
+
+/* =====================================================================
+   TOP BAR LAYOUT
+   ===================================================================== */
 .topbar {
   display: flex;
   flex-direction: column;
@@ -91,14 +134,18 @@ body {
   margin-bottom: 16px;
 }
 
+/* ---------- Organization badge ---------- */
 .orgBadge {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+
   padding: 8px 14px;
   border-radius: 999px;
+
   border: 1px solid var(--border);
   background: var(--bg-card);
+
   font-size: 13px;
   font-weight: 700;
 }
@@ -107,12 +154,13 @@ body {
   width: 10px;
   height: 10px;
   border-radius: 999px;
+
   background: linear-gradient(135deg, #2563eb, #7c3aed);
 }
 
-/* =========================================================
-   USER MENU + DROPDOWN
-========================================================= */
+/* =====================================================================
+   USER MENU + AVATAR
+   ===================================================================== */
 .userMenu {
   display: flex;
   align-items: center;
@@ -120,73 +168,100 @@ body {
   position: relative;
 }
 
+/* ---------- Auth state pill ---------- */
 .authPill {
   font-size: 12px;
-  color: var(--text-muted);
-  background: var(--bg-card);
-  border: 1px solid var(--border);
   padding: 6px 10px;
+
   border-radius: 999px;
+  border: 1px solid var(--border);
+
+  background: var(--bg-card);
+  color: var(--text-muted);
 }
 
+/* ---------- Avatar button ---------- */
 .avatarBtn {
   width: 40px;
   height: 40px;
+
   border-radius: 999px;
   border: 1px solid var(--border);
+
   background: var(--bg-card);
+  cursor: pointer;
+
   display: grid;
   place-items: center;
-  cursor: pointer;
 }
 
+/* ---------- Avatar initials ---------- */
 .avatarCircle {
   width: 32px;
   height: 32px;
+
   border-radius: 999px;
   background: linear-gradient(135deg, #2563eb, #7c3aed);
+
   color: #fff;
   font-weight: 700;
+
   display: grid;
   place-items: center;
 }
 
+/* =====================================================================
+   USER DROPDOWN MENU
+   ===================================================================== */
 .dropdown {
   position: absolute;
   top: 48px;
   right: 0;
+
   width: 260px;
   max-width: calc(100vw - 24px);
+
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 14px;
-  box-shadow: 0 16px 40px rgba(0,0,0,0.22);
+
   padding: 10px;
+
+  box-shadow: 0 16px 40px rgba(0,0,0,0.22);
   display: none;
+
   z-index: 20;
 }
 
-.dropdown.open { display: block; }
+.dropdown.open {
+  display: block;
+}
 
+/* ---------- Dropdown header ---------- */
 .ddHeader {
   display: flex;
-  gap: 10px;
   align-items: center;
+  gap: 10px;
+
   padding: 8px;
   min-width: 0;
 }
 
+/* ---------- Email container ---------- */
 .ddHeader > div:last-child {
   min-width: 0;
   flex: 1;
 }
 
+/* ---------- Email text ---------- */
 .ddEmail {
   font-size: 13px;
   font-weight: 600;
+
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+
   cursor: default;
 }
 
@@ -194,23 +269,28 @@ body {
   text-decoration: underline dotted;
 }
 
+/* ---------- Dropdown muted text ---------- */
 .ddMuted {
   font-size: 12px;
   color: var(--text-muted);
 }
 
+/* ---------- Divider ---------- */
 .ddDivider {
   height: 1px;
   background: var(--border);
   margin: 8px 0;
 }
 
+/* ---------- Dropdown item ---------- */
 .ddItem {
   display: flex;
   align-items: center;
   gap: 10px;
+
   padding: 10px;
   border-radius: 10px;
+
   text-decoration: none;
   color: var(--text-main);
 }
@@ -219,24 +299,29 @@ body {
   background: rgba(127,127,127,0.08);
 }
 
+/* ---------- Dropdown icon ---------- */
 .ddIcon {
   width: 28px;
   height: 28px;
+
   border-radius: 10px;
   background: rgba(127,127,127,0.12);
+
   display: grid;
   place-items: center;
 }
 
-/* =========================================================
-   CARDS
-========================================================= */
+/* =====================================================================
+   CARD CONTAINERS
+   ===================================================================== */
 .card {
   background: var(--bg-card);
   border: 1px solid var(--border);
+
   border-radius: 16px;
   padding: 18px 16px;
   margin-bottom: 16px;
+
   box-shadow: 0 6px 20px rgba(0,0,0,0.06);
 }
 
@@ -245,17 +330,22 @@ body {
   font-size: 17px;
 }
 
+/* ---------- Page title ---------- */
 .pageTitle {
-  margin: 0 0 6px;
   font-size: 22px;
+  margin: 0 0 6px;
 }
 
+/* ---------- Page subtitle ---------- */
 .pageSubtitle {
   margin: 0;
   color: var(--text-muted);
 }
 
-.center { text-align: center; }
+/* ---------- Utility ---------- */
+.center {
+  text-align: center;
+}
 
 .divider {
   height: 1px;
@@ -263,9 +353,9 @@ body {
   margin: 12px 0;
 }
 
-/* =========================================================
+/* =====================================================================
    ACTION ROWS
-========================================================= */
+   ===================================================================== */
 .actions {
   display: flex;
   gap: 12px;
@@ -273,34 +363,41 @@ body {
   align-items: center;
 }
 
-/* =========================================================
-   ✅ UNIFIED BUTTON SYSTEM (FINAL)
-========================================================= */
+/* =====================================================================
+   ✅ CANONICAL BUTTON SYSTEM (AUDIT SAFE)
+   ---------------------------------------------------------------------
+   This is the SINGLE source of truth for all buttons.
+   ===================================================================== */
 button,
 a.btnLike {
+
+  /* ---- Layout ---- */
   display: inline-flex;
   align-items: center;
   justify-content: center;
 
+  /* ---- Typography ---- */
   font-family: inherit;
   font-size: 14px;
   line-height: 1;
   font-weight: 600;
   letter-spacing: 0.01em;
 
+  /* ---- Box model ---- */
   padding: 12px 18px;
   border-radius: 12px;
   border: 1px solid var(--border);
 
+  /* ---- Visual ---- */
   background: var(--bg-card);
   color: var(--text-main);
+
+  /* ---- Interaction ---- */
   cursor: pointer;
   text-decoration: none;
-
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
 }
 
+/* ---------- Primary button ---------- */
 button.primary,
 a.btnLike.primary {
   background: var(--primary);
@@ -309,33 +406,37 @@ a.btnLike.primary {
   box-shadow: 0 6px 16px rgba(37,99,235,0.35);
 }
 
+/* ---------- Disabled ---------- */
 button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
 
-/* Smaller variant */
+/* ---------- Mini variant ---------- */
 .miniBtn {
   padding: 8px 14px;
   font-size: 12px;
 }
 
-/* =========================================================
+/* =====================================================================
    INPUTS
-========================================================= */
+   ===================================================================== */
 input {
   padding: 12px 14px;
   border-radius: 12px;
   border: 1px solid var(--border);
+
   font-size: 18px;
+  line-height: 1;
   text-align: center;
+
   color: var(--text-main);
   background: transparent;
 }
 
-/* =========================================================
-   FOCUS RING (BUTTONS, INPUTS, DROPDOWN)
-========================================================= */
+/* =====================================================================
+   FOCUS RING SYSTEM (BUTTONS, INPUTS, DROPDOWN ITEMS)
+   ===================================================================== */
 button:focus,
 a.btnLike:focus,
 input:focus,
@@ -347,9 +448,11 @@ button:focus-visible,
 a.btnLike:focus-visible,
 input:focus-visible,
 .ddItem:focus-visible {
+
   outline: 3px solid var(--primary);
   outline-offset: 3px;
   border-radius: 12px;
+
   animation: focusPulse 160ms ease-out;
 }
 
@@ -373,9 +476,9 @@ input:focus-visible,
   }
 }
 
-/* =========================================================
-   FLOW (UNCHANGED)
-========================================================= */
+/* =====================================================================
+   FLOW INDICATOR (ENTERPRISE SAFE)
+   ===================================================================== */
 .flow-enabled .flow-step {
   position: relative;
   margin-left: 36px;
@@ -386,12 +489,14 @@ input:focus-visible,
   position: absolute;
   left: -36px;
   top: 22px;
+
   width: 14px;
   height: 14px;
+
   border-radius: 999px;
   background: var(--border);
+
   box-shadow: 0 0 0 4px var(--bg-page);
-  transition: all 280ms ease;
 }
 
 .flow-enabled .flow-step::after {
@@ -399,8 +504,10 @@ input:focus-visible,
   position: absolute;
   left: -30px;
   top: 38px;
+
   width: 2px;
   height: calc(100% + 16px);
+
   background: var(--border);
 }
 
@@ -416,17 +523,23 @@ input:focus-visible,
   background: var(--primary);
   transform: scale(1.25);
   box-shadow: 0 0 0 6px rgba(37,99,235,0.25);
-  animation: pulseStep 1.6s infinite;
 }
 
-@keyframes pulseStep {
-  0%   { box-shadow: 0 0 0 6px rgba(37,99,235,0.25); }
-  70%  { box-shadow: 0 0 0 12px rgba(37,99,235,0); }
-  100% { box-shadow: 0 0 0 6px rgba(37,99,235,0); }
-}
+/* =====================================================================
+   RESPONSIVE LAYOUT
+   ===================================================================== */
+@media (min-width: 640px) {
+  .app {
+    max-width: 760px;
+    margin: 0 auto;
+  }
 
-@media (max-width: 480px) {
-  .flow-enabled .flow-step { margin-left: 28px; }
-  .flow-enabled .flow-step::before { left: -28px; }
-  .flow-enabled .flow-step::after  { left: -22px; }
+  .topbar {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+
+  .actions {
+    flex-direction: row;
+  }
 }
