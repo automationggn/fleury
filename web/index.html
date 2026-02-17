@@ -1,311 +1,19 @@
 <!doctype html>
 <html lang="en">
 <head>
+  <meta charset="utf-8" />
+  <title>TOTP Self‑Service Enrollment</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- App config kept inline (safe + minimal) -->
   <script>
     window.APP_CONFIG = {
       API_BASE: "https://fleury-test-nodejs-01.azurewebsites.net"
     };
   </script>
 
-  <meta charset="utf-8" />
-  <title>TOTP Self‑Service Enrollment</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-  <style>
-    :root {
-      --bg-page: #f3f4f6;
-      --bg-card: #ffffff;
-      --border: #e5e7eb;
-      --text-main: #111827;
-      --text-muted: #6b7280;
-      --primary: #2563eb;
-
-      --success-bg: #ecfdf5;
-      --success-text: #047857;
-      --warn-bg: #fffbeb;
-      --warn-text: #b45309;
-      --err-bg: #fef2f2;
-      --err-text: #b91c1c;
-    }
-
-    body {
-      margin: 0;
-      background: var(--bg-page);
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-      color: var(--text-main);
-    }
-
-    .app {
-      max-width: 760px;
-      margin: 26px auto;
-      padding: 0 16px 40px;
-    }
-
-    /* TOP HEADER (ONLY org + profile) */
-    .topbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      margin-bottom: 18px;
-    }
-
-    /* Org name badge (top-left) */
-    .orgBadge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 12px;
-      border-radius: 999px;
-      border: 1px solid var(--border);
-      background: #fff;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.04);
-      font-size: 13px;
-      font-weight: 700;
-      white-space: nowrap;
-      max-width: 260px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .orgDot {
-      width: 10px;
-      height: 10px;
-      border-radius: 999px;
-      background: linear-gradient(135deg, #2563eb, #7c3aed);
-      flex: 0 0 auto;
-    }
-
-    /* Avatar menu */
-    .userMenu {
-      position: relative;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .authPill {
-      font-size: 12px;
-      color: var(--text-muted);
-      background: #fff;
-      border: 1px solid var(--border);
-      padding: 6px 10px;
-      border-radius: 999px;
-      white-space: nowrap;
-    }
-
-    .avatarBtn {
-      width: 40px;
-      height: 40px;
-      border-radius: 999px;
-      border: 1px solid var(--border);
-      background: #fff;
-      display: grid;
-      place-items: center;
-      cursor: pointer;
-      user-select: none;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.06);
-      transition: transform 120ms ease;
-    }
-
-    .avatarBtn:hover { transform: translateY(-1px); }
-
-    .avatarCircle {
-      width: 34px;
-      height: 34px;
-      border-radius: 999px;
-      background: linear-gradient(135deg, #2563eb, #7c3aed);
-      color: #fff;
-      display: grid;
-      place-items: center;
-      font-weight: 700;
-      font-size: 14px;
-      letter-spacing: 0.5px;
-    }
-
-    .dropdown {
-      position: absolute;
-      top: 48px;
-      right: 0;
-      width: 280px;
-      background: #fff;
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      box-shadow: 0 16px 40px rgba(0,0,0,0.12);
-      padding: 10px;
-      display: none;
-      z-index: 20;
-    }
-
-    .dropdown.open { display: block; }
-
-    .ddHeader {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      padding: 8px;
-    }
-
-    .ddEmail {
-      font-weight: 600;
-      font-size: 13px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      max-width: 200px;
-    }
-
-    .ddMuted {
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-top: 2px;
-    }
-
-    .ddDivider {
-      height: 1px;
-      background: var(--border);
-      margin: 8px 0;
-    }
-
-    .ddItem {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      padding: 10px 10px;
-      border-radius: 10px;
-      cursor: pointer;
-      text-decoration: none;
-      color: var(--text-main);
-      font-weight: 500;
-    }
-
-    .ddItem:hover { background: #f9fafb; }
-
-    .ddIcon {
-      width: 28px;
-      height: 28px;
-      border-radius: 10px;
-      background: #f3f4f6;
-      display: grid;
-      place-items: center;
-      font-size: 14px;
-    }
-
-    /* Cards */
-    h2 { margin: 0; font-size: 18px; }
-
-    .card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 18px;
-      margin-bottom: 18px;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.04);
-    }
-
-    /* Title card header text */
-    .pageTitle {
-      margin: 0 0 6px 0;
-      font-size: 28px;
-      letter-spacing: -0.2px;
-    }
-
-    .pageSubtitle {
-      margin: 0;
-      color: var(--text-muted);
-    }
-
-    .row {
-      display: flex;
-      gap: 18px;
-      flex-wrap: wrap;
-      align-items: center;
-    }
-
-    .actions {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-      align-items: center;
-    }
-
-    .muted { color: var(--text-muted); }
-
-    button {
-      padding: 9px 16px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      background: #fff;
-      cursor: pointer;
-      font-weight: 500;
-    }
-
-    button.primary {
-      background: var(--primary);
-      color: #fff;
-      border-color: var(--primary);
-      box-shadow: 0 4px 12px rgba(37,99,235,0.35);
-    }
-
-    input {
-      padding: 10px 12px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      width: 160px;
-      font-size: 16px;
-      text-align: center;
-    }
-
-    .divider {
-      height: 1px;
-      background: var(--border);
-      margin: 14px 0;
-    }
-
-    .ok, .warn, .err {
-      display: inline-block;
-      padding: 8px 12px;
-      border-radius: 10px;
-      font-weight: 500;
-    }
-
-    .ok { background: var(--success-bg); color: var(--success-text); }
-    .warn { background: var(--warn-bg); color: var(--warn-text); }
-    .err { background: var(--err-bg); color: var(--err-text); }
-
-    img.qr {
-      width: 220px;
-      height: 220px;
-      border-radius: 14px;
-      border: 1px solid var(--border);
-      background: #fff;
-    }
-
-    pre {
-  background: #f9fafb;
-  padding: 10px;
-  border-radius: 10px;
-  font-size: 12px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  color: #374151;
-  /* ✅ Prevent overflow */
-  max-width: 100%;
-  white-space: pre-wrap;       /* allow wrapping */
-  word-break: break-all;       /* break long tokens */
-  overflow-wrap: anywhere;     /* modern fallback */
-  overflow-x: auto;            /* safety */
-
-    }
-
-    a { color: var(--primary); font-weight: 500; text-decoration: none; }
-    a:hover { text-decoration: underline; }
-
-    @media (max-width: 640px) {
-      .topbar { flex-wrap: wrap; }
-      .userMenu { margin-left: auto; }
-      .pageTitle { font-size: 24px; }
-    }
-  </style>
+  <!-- Styles -->
+  <link rel="stylesheet" href="./css/styles.css" />
 </head>
 
 <body>
@@ -321,13 +29,13 @@
       <div class="userMenu">
         <span id="authState" class="authPill">Checking…</span>
 
-        <button id="avatarBtn" class="avatarBtn" aria-label="User menu" title="User menu">
+        <button id="avatarBtn" class="avatarBtn" aria-label="User menu" title="User menu" type="button">
           <div id="avatarCircle" class="avatarCircle">?</div>
         </button>
 
         <div id="userDropdown" class="dropdown" role="menu" aria-label="User menu">
           <div class="ddHeader">
-            <div class="avatarCircle" id="avatarCircleMini" style="width:34px;height:34px;">?</div>
+            <div class="avatarCircle avatarCircleMini" id="avatarCircleMini">?</div>
             <div>
               <div class="ddEmail" id="ddEmail">—</div>
               <div class="ddMuted">Signed in via Azure Static Web Apps</div>
@@ -348,7 +56,7 @@
 
           <div class="ddDivider"></div>
 
-          <a class="ddItem" id="loginLink" href="/.auth/login/aad" style="display:none">
+          <a class="ddItem ddHidden" id="loginLink" href="/.auth/login/aad">
             <div class="ddIcon">🔐</div>
             <div>Login</div>
           </a>
@@ -356,7 +64,7 @@
       </div>
     </div>
 
-    <!-- TITLE CARD (NEW container like sections) -->
+    <!-- TITLE CARD -->
     <div class="card">
       <h1 class="pageTitle">TOTP Self‑Service Enrollment</h1>
       <p class="pageSubtitle">Enroll Microsoft Authenticator using self‑registered TOTP codes.</p>
@@ -367,7 +75,7 @@
       <h2>1) Sign in</h2>
       <div class="actions">
         <a id="loginLinkInline" href="/.auth/login/aad">Login</a>
-        <a id="logoutLinkInline" href="/.auth/logout" style="display:none">Logout</a>
+        <a id="logoutLinkInline" class="inlineHidden" href="/.auth/logout">Logout</a>
         <span class="muted">Use the avatar menu on the top-right for quick actions.</span>
       </div>
 
@@ -388,20 +96,19 @@
     <!-- 3. ENROLL -->
     <div class="card">
       <h2>3) Start enrollment (QR)</h2>
-      <p class="muted">
-        Scan the QR code using Microsoft Authenticator.
-      </p>
+      <p class="muted">Scan the QR code using Microsoft Authenticator.</p>
 
       <div class="actions">
-        <button class="primary" id="startEnrollBtn">Start / Re‑generate QR</button>
+        <button class="primary" id="startEnrollBtn" type="button">Start / Re‑generate QR</button>
         <span id="startEnrollMsg" class="muted"></span>
       </div>
 
-      <div id="qrBlock" style="display:none">
+      <div id="qrBlock" class="qrBlock is-hidden">
         <div class="divider"></div>
+
         <div class="row">
           <img id="qrImg" class="qr" alt="QR code" />
-          <div style="flex:1">
+          <div class="qrMeta">
             <div><strong>Issuer:</strong> <span id="issuerLine">—</span></div>
             <div class="muted">otpauth URI (do not share):</div>
             <pre id="otpauthPre"></pre>
@@ -413,227 +120,19 @@
     <!-- 4. VERIFY -->
     <div class="card">
       <h2>4) Verify enrollment</h2>
-      <p class="muted">
-        Enter the 6‑digit code from your authenticator app.
-      </p>
+      <p class="muted">Enter the 6‑digit code from your authenticator app.</p>
 
       <div class="actions">
         <input id="otpInput" inputmode="numeric" maxlength="6" placeholder="6‑digit OTP" />
-        <button class="primary" id="verifyBtn">Verify</button>
+        <button class="primary" id="verifyBtn" type="button">Verify</button>
       </div>
 
-      <div id="verifyMsg" class="muted" style="margin-top:10px;"></div>
+      <div id="verifyMsg" class="muted verifyMsg"></div>
     </div>
 
   </div>
 
-  <script>
-    const API = window.APP_CONFIG.API_BASE;
-
-    function emailToAlnumKey(email) {
-      return (email || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-    }
-
-    function qrUrl(text) {
-      return "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=" +
-        encodeURIComponent(text);
-    }
-
-    async function getUserInfo() {
-      const res = await fetch("/.auth/me");
-      const data = await res.json();
-      return data.clientPrincipal || null;
-    }
-
-    function initialsFromEmail(email) {
-      if (!email) return "?";
-      const left = email.split("@")[0] || email;
-      const parts = left.split(/[.\-_]+/).filter(Boolean);
-      const a = (parts[0] || left)[0] || "?";
-      const b = (parts[1] || "")[0] || (left.length > 1 ? left[1] : "");
-      return (a + b).toUpperCase();
-    }
-
-    // Org name: after "@" and before ".com" or any other "." if present beffore it.
-    function orgFromEmail(email) {
-        if (!email || !email.includes("@")) return "—";   
-        const domain = (email.split("@")[1] || "").trim();
-        if(!domain) return "—";
-
-        // Take only the first label before the first dot
-        const firstLabel = domain.split(".")[0] || "";
-        if (!firstLabel) return "—";
-        const lower = firstLabel.toLowerCase();
-        return lower.charAt(0).toUpperCase() + lower.slice(1);
-    }
-
-    function setAuthUI(user) {
-      const isAuthed = !!user;
-      const email = user?.userDetails || "";
-
-      // Org name
-      document.getElementById("orgNameText").textContent = isAuthed ? orgFromEmail(email) : "—";
-
-      // Auth pill + dropdown email
-      document.getElementById("authState").textContent = isAuthed ? "Authenticated" : "Anonymous";
-      document.getElementById("ddEmail").textContent = isAuthed ? email : "Not signed in";
-
-      // Avatar initials
-      const ini = isAuthed ? initialsFromEmail(email) : "?";
-      document.getElementById("avatarCircle").textContent = ini;
-      document.getElementById("avatarCircleMini").textContent = ini;
-
-      // Inline card fields
-      document.getElementById("userLine").textContent = isAuthed ? email : "—";
-      document.getElementById("rolesLine").textContent = isAuthed ? (user.userRoles || []).join(", ") : "—";
-
-      // Links visibility (dropdown)
-      document.getElementById("loginLink").style.display = isAuthed ? "none" : "flex";
-      document.getElementById("logoutLink").style.display = isAuthed ? "flex" : "none";
-      document.getElementById("msProfileLink").style.display = isAuthed ? "flex" : "none";
-
-      // Links visibility (inline)
-      document.getElementById("loginLinkInline").style.display = isAuthed ? "none" : "inline";
-      document.getElementById("logoutLinkInline").style.display = isAuthed ? "inline" : "none";
-    }
-
-    // Dropdown behavior
-    const avatarBtn = document.getElementById("avatarBtn");
-    const userDropdown = document.getElementById("userDropdown");
-
-    function closeDropdown() { userDropdown.classList.remove("open"); }
-    function toggleDropdown() { userDropdown.classList.toggle("open"); }
-
-    avatarBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      toggleDropdown();
-    });
-
-    document.addEventListener("click", () => closeDropdown());
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") closeDropdown();
-    });
-
-    async function startEnrollment() {
-      const msg = document.getElementById("startEnrollMsg");
-      const qrBlock = document.getElementById("qrBlock");
-      qrBlock.style.display = "none";
-      msg.textContent = "Starting…";
-
-      try {
-        const user = await getUserInfo();
-        const email = user?.userDetails;
-
-        if (!email) {
-          msg.innerHTML = "<span class='err'>Not signed in. Please Login.</span>";
-          return;
-        }
-
-        const employeeId = emailToAlnumKey(email);
-        if (!employeeId) {
-          msg.innerHTML = "<span class='err'>Unable to derive identifier from email.</span>";
-          return;
-        }
-
-        const url = API + "/api/enroll";
-        const payload = {
-          employeeId,
-          issuer: "FleuryTOTP",
-          digits: 6,
-          period: 30
-        };
-
-        const res = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
-
-        if (!res.ok) {
-          const text = await res.text();
-          msg.innerHTML = `<span class='err'>Enroll failed: ${res.status} ${text}</span>`;
-          return;
-        }
-
-        const data = await res.json();
-        if (!data?.otpauth) {
-          msg.innerHTML = "<span class='err'>Enroll response missing otpauth.</span>";
-          console.log("Enroll response:", data);
-          return;
-        }
-
-        document.getElementById("issuerLine").textContent = data.issuer || "—";
-        document.getElementById("otpauthPre").textContent = data.otpauth;
-        document.getElementById("qrImg").src = qrUrl(data.otpauth);
-
-        qrBlock.style.display = "block";
-        msg.innerHTML = `<span class='ok'>QR generated for ${email}.</span>`;
-      } catch (e) {
-        console.error(e);
-        msg.innerHTML = "<span class='err'>Failed to start enrollment.</span>";
-      }
-    }
-
-    async function verifyCode() {
-      const otp = document.getElementById("otpInput").value.trim();
-      const msg = document.getElementById("verifyMsg");
-
-      if (!/^\d{6}$/.test(otp)) {
-        msg.innerHTML = "<span class='warn'>Enter a 6-digit OTP.</span>";
-        return;
-      }
-
-      const user = await getUserInfo();
-      const email = user?.userDetails;
-
-      if (!email) {
-        msg.innerHTML = "<span class='err'>Not signed in. Please Login.</span>";
-        return;
-      }
-
-      const employeeId = emailToAlnumKey(email);
-      if (!employeeId) {
-        msg.innerHTML = "<span class='err'>Unable to derive identifier from email.</span>";
-        return;
-      }
-
-      msg.textContent = "Verifying…";
-
-      try {
-        const url = API + "/api/verify";
-        const res = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ employeeId, otp })
-        });
-
-        const data = await res.json().catch(() => ({}));
-        const isSuccess = res.ok && (data.ok === true || data.valid === true);
-
-        if (isSuccess) {
-          msg.innerHTML = `<span class='ok'>Enrollment verified for ${email}.</span>`;
-          document.getElementById("otpInput").value = "";
-        } else {
-          const reason = data?.error || data?.reason || "Verification failed.";
-          msg.innerHTML = `<span class='err'>${reason}</span>`;
-          console.log("Verify response:", data);
-        }
-      } catch (e) {
-        console.error(e);
-        msg.innerHTML = "<span class='err'>Verification failed (network/error).</span>";
-      }
-    }
-
-    startEnrollBtn.onclick = startEnrollment;
-    verifyBtn.onclick = verifyCode;
-
-    (async () => {
-      const user = await getUserInfo();
-      setAuthUI(user);
-    })();
-
-    console.log("API BASE =", API);
-  </script>
-
+  <!-- App script -->
+  <script defer src="./js/app.js"></script>
 </body>
 </html>
