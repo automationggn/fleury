@@ -770,3 +770,49 @@ button.miniBtn {
   line-height: 1;
   padding: 8px 14px;
 }
+
+/* =========================================================
+   SAFE FIX: WRAP USER EMAIL IN SIGN-IN SECTION
+   ---------------------------------------------------------
+   Scope:
+   - ONLY affects the user email text
+   - No impact to modals, auth, or buttons
+========================================================= */
+
+#userLine {
+  display: inline-block;
+  max-width: 100%;
+
+  /* Allow long emails to wrap safely */
+  overflow-wrap: anywhere;   /* modern, preferred */
+  word-break: break-word;    /* fallback for older browsers */
+
+  line-height: 1.3;
+}
+
+/* =========================================================
+   SAFE POLISH: BACKGROUND PILL FOR USER EMAIL (SIGN-IN)
+   ---------------------------------------------------------
+   Scope:
+   - ONLY the user email line (#userLine)
+   - No impact to modals, auth, or layout
+========================================================= */
+
+#userLine {
+  display: inline-block;
+  max-width: 100%;
+
+  /* Wrapping behavior (already safe) */
+  overflow-wrap: anywhere;
+  word-break: break-word;
+
+  /* Subtle pill styling */
+  padding: 4px 8px;
+  border-radius: 999px;
+
+  background: rgba(37, 99, 235, 0.08);   /* subtle brand tint */
+  color: var(--text-main);
+
+  font-size: 13px;
+  line-height: 1.4;
+}
