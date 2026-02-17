@@ -51,7 +51,7 @@ app.http("enroll", {
       body = {};
     }
 
-    const employeeId = String(body.employeeId || "").trim();
+    const employeeId = String(body.employeeId || "").trim().toLowerCase();
     const issuer = String(body.issuer || "MyCompany").trim();
 
     if (!employeeId) {

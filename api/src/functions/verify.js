@@ -12,7 +12,7 @@ app.http("verify", {
   route: "verify",
   handler: async (request, context) => {
     const body = await request.json().catch(() => ({}));
-    const employeeId = (body.employeeId || "").trim();
+    const employeeId = (body.employeeId || "").trim().toLowerCase();
     const token = (body.otp || "").trim();
 
     if (!employeeId || !token) {
