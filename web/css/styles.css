@@ -816,3 +816,16 @@ button.miniBtn {
   font-size: 13px;
   line-height: 1.4;
 }
+
+/* =========================================================
+   SAFE FIX: STATUS BUTTON SIZE CONSISTENCY
+   ---------------------------------------------------------
+   Make the "Refresh status" button match other primary buttons
+   without touching HTML or other mini buttons.
+========================================================= */
+
+.statusToolsBar .miniBtn {
+  padding: 12px 18px;   /* same as normal buttons */
+  font-size: 14px;
+  line-height: 1;
+}
