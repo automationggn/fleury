@@ -5,9 +5,15 @@
   let lastKnownStatus = null; // "not_enrolled" | "pending" | "enrolled" | null
   let lastKnownUser = null;
 
-  // Busy flags (disable buttons during calls)
+  // Busy flags
   let isEnrollBusy = false;
   let isVerifyBusy = false;
+
+  // ✅ Local override: when user re-enrolls (new seed), force pending until verified
+  let pendingOverride = {
+    employeeId: null,
+    untilMs: 0
+  };
 
   // -----------------------------
   // Helpers
@@ -54,6 +60,28 @@
     } catch {
       return dt;
     }
+  }
+
+  function now() {
+    return Date.now();
+  }
+
+  function isPendingOverrideActive(employeeId) {
+    return (
+      employeeId &&
+      pendingOverride.employeeId === employeeId &&
+      pendingOverride.untilMs > now()
+    );
+  }
+
+  function setPendingOverride(employeeId, minutes = 10) {
+    pendingOverride.employeeId = employeeId;
+    pendingOverride.untilMs = now() + minutes * 60 * 1000;
+  }
+
+  function clearPendingOverride() {
+    pendingOverride.employeeId = null;
+    pendingOverride.untilMs = 0;
   }
 
   // -----------------------------
@@ -106,7 +134,7 @@
   });
 
   // -----------------------------
-  // Step 8: Nice Confirm Modal (created dynamically)
+  // Modal (Step 8)
   // -----------------------------
   function ensureModalStyles() {
     if (document.getElementById("totpModalStyles")) return;
@@ -168,9 +196,10 @@
       }
 
       .modalBody p {
-        margin: 0 0 10px 0;
+        margin: 0;
         color: var(--text-muted, #6b7280);
         line-height: 1.45;
+        white-space: pre-line;
       }
 
       .modalActions {
@@ -199,7 +228,6 @@
         cursor: pointer;
         font-weight: 700;
       }
-
       .btnDanger:hover { filter: brightness(0.98); }
       .btnGhost:hover { background: #f9fafb; }
     `;
@@ -246,7 +274,6 @@
       cancelBtn.textContent = cancelText || "Cancel";
 
       overlay.classList.add("open");
-      // focus primary action
       confirmBtn.focus();
 
       return new Promise((resolve) => {
@@ -277,7 +304,6 @@
         };
 
         overlay.onclick = (e) => {
-          // click outside dialog closes
           if (e.target === overlay) {
             cleanup();
             resolve(false);
@@ -306,24 +332,19 @@
   }
 
   // -----------------------------
-  // Step 6 status rendering + Step 9 button state updates
+  // Status UI + Button state (Step 9)
   // -----------------------------
   function findStatusMessageElement() {
-    const byId = document.getElementById("enrollmentStatusMsg");
-    if (byId) return byId;
-
     const headings = Array.from(document.querySelectorAll("h2"));
     const statusH2 = headings.find(
       (h) => (h.textContent || "").trim().toLowerCase() === "2) enrollment status"
     );
     if (!statusH2) return null;
-
     const card = statusH2.closest(".card");
-    if (!card) return null;
-    return card.querySelector(".muted");
+    return card ? card.querySelector(".muted") : null;
   }
 
-  function setStatusUI({ state, issuer, enrolledAt, detail }) {
+  function setStatusUI({ state, issuer, enrolledAt, detail, overrideNote }) {
     const el = findStatusMessageElement();
     if (!el) return;
 
@@ -331,7 +352,6 @@
       el.textContent = "Checking status…";
       return;
     }
-
     if (state === "anonymous") {
       el.innerHTML =
         "<span class='warn'>Login required</span> <span class='muted'>Sign in to view enrollment status.</span>";
@@ -361,6 +381,11 @@
       parts.push(`<span class='muted'>Issuer: ${issuer}</span>`);
     }
 
+    // ✅ show note when we override server-enrolled -> pending after re-enroll
+    if (overrideNote) {
+      parts.push(`<span class='muted'>(${overrideNote})</span>`);
+    }
+
     el.innerHTML = parts.join(" ");
   }
 
@@ -379,20 +404,17 @@
     const verifyBtn = document.getElementById("verifyBtn");
 
     const isAuthed = !!user?.userDetails;
-    const s = status; // may be null if unknown
 
-    // Disable logic
     startBtn.disabled = !isAuthed || isEnrollBusy;
-    verifyBtn.disabled = !isAuthed || isVerifyBusy || s !== "pending";
+    verifyBtn.disabled = !isAuthed || isVerifyBusy || status !== "pending";
 
-    // Labels (Start button only)
     if (!isAuthed) {
       startBtn.textContent = "Login to Enroll";
-    } else if (s === "not_enrolled") {
+    } else if (status === "not_enrolled") {
       startBtn.textContent = "Start Enrollment (Generate QR)";
-    } else if (s === "pending") {
+    } else if (status === "pending") {
       startBtn.textContent = "Re-generate QR";
-    } else if (s === "enrolled") {
+    } else if (status === "enrolled") {
       startBtn.textContent = "Re-enroll (Generate New QR)";
     } else {
       startBtn.textContent = "Start / Re-generate QR";
@@ -426,9 +448,29 @@
       setStatusUI({ state: "loading" });
 
       const data = await fetchEnrollmentStatus(employeeId);
-      const status = (data?.status || "").toLowerCase();
+      let status = (data?.status || "").toLowerCase();
       const issuer = data?.issuer || null;
       const enrolledAt = data?.enrolledAt || null;
+
+      // ✅ If we just re-enrolled, force pending even if server still says enrolled
+      const overrideActive = isPendingOverrideActive(employeeId);
+      if (overrideActive && status === "enrolled") {
+        status = "pending";
+        lastKnownStatus = "pending";
+        setStatusUI({
+          state: "pending",
+          issuer,
+          enrolledAt: null,
+          overrideNote: "awaiting verification of newly generated QR"
+        });
+        setButtonsState({ user, status: lastKnownStatus });
+        return;
+      }
+
+      // If server starts returning pending, clear override
+      if (overrideActive && status === "pending") {
+        clearPendingOverride();
+      }
 
       if (status === "not_enrolled" || status === "pending" || status === "enrolled") {
         lastKnownStatus = status;
@@ -461,15 +503,26 @@
   }
 
   // -----------------------------
-  // Enrollment + Verification (with status refresh hooks)
+  // Enrollment + Verification
   // -----------------------------
   async function startEnrollment() {
     const msg = document.getElementById("startEnrollMsg");
     const qrBlock = document.getElementById("qrBlock");
-
     if (isEnrollBusy) return;
 
-    // Step 8: modal confirm if enrolled
+    const user = await getUserInfo();
+    lastKnownUser = user;
+
+    const email = user?.userDetails;
+    if (!email) {
+      msg.innerHTML = "<span class='err'>Not signed in. Please Login.</span>";
+      await refreshStatus(user);
+      return;
+    }
+
+    const employeeId = emailToAlnumKey(email);
+
+    // Modal confirm if enrolled
     const allowed = await confirmReEnrollIfNeeded();
     if (!allowed) {
       msg.innerHTML = "<span class='warn'>Re-enroll cancelled. Existing enrollment is unchanged.</span>";
@@ -477,30 +530,12 @@
     }
 
     isEnrollBusy = true;
-
-    // Update buttons immediately
     setButtonsState({ user: lastKnownUser, status: lastKnownStatus });
 
     qrBlock.classList.add("is-hidden");
     msg.textContent = "Starting…";
 
     try {
-      const user = await getUserInfo();
-      lastKnownUser = user;
-      const email = user?.userDetails;
-
-      if (!email) {
-        msg.innerHTML = "<span class='err'>Not signed in. Please Login.</span>";
-        await refreshStatus(user);
-        return;
-      }
-
-      const employeeId = emailToAlnumKey(email);
-      if (!employeeId) {
-        msg.innerHTML = "<span class='err'>Unable to derive identifier from email.</span>";
-        return;
-      }
-
       const url = API + "/api/enroll";
       const payload = {
         employeeId,
@@ -536,14 +571,20 @@
 
       qrBlock.classList.remove("is-hidden");
 
-      // Message depends on whether this was a re-enroll
-      if (lastKnownStatus === "enrolled") {
-        msg.innerHTML = `<span class='ok'>New QR generated for ${email}. Please verify to complete re-enrollment.</span>`;
-      } else {
-        msg.innerHTML = `<span class='ok'>QR generated for ${email}.</span>`;
-      }
+      // ✅ Immediately force pending UX after enroll (reseed requires verification)
+      setPendingOverride(employeeId, 10);
+      lastKnownStatus = "pending";
+      setStatusUI({
+        state: "pending",
+        issuer: "FleuryTOTP",
+        enrolledAt: null,
+        overrideNote: "awaiting verification of newly generated QR"
+      });
+      setButtonsState({ user, status: lastKnownStatus });
 
-      // After enroll, status should be pending
+      msg.innerHTML = `<span class='ok'>QR generated for ${email}. Please verify to complete enrollment.</span>`;
+
+      // Refresh (will keep pending if server incorrectly reports enrolled)
       await refreshStatus(user);
     } catch (e) {
       console.error(e);
@@ -558,10 +599,9 @@
     const otpInput = document.getElementById("otpInput");
     const otp = otpInput.value.trim();
     const msg = document.getElementById("verifyMsg");
-
     if (isVerifyBusy) return;
 
-    // Step 9: verify should only be enabled when pending, but double-guard anyway
+    // Guard
     if (lastKnownStatus !== "pending") {
       msg.innerHTML = "<span class='warn'>No pending enrollment to verify. Generate a QR first.</span>";
       return;
@@ -577,8 +617,8 @@
 
     const user = await getUserInfo();
     lastKnownUser = user;
-    const email = user?.userDetails;
 
+    const email = user?.userDetails;
     if (!email) {
       msg.innerHTML = "<span class='err'>Not signed in. Please Login.</span>";
       await refreshStatus(user);
@@ -588,12 +628,6 @@
     }
 
     const employeeId = emailToAlnumKey(email);
-    if (!employeeId) {
-      msg.innerHTML = "<span class='err'>Unable to derive identifier from email.</span>";
-      isVerifyBusy = false;
-      setButtonsState({ user: lastKnownUser, status: lastKnownStatus });
-      return;
-    }
 
     msg.textContent = "Verifying…";
 
@@ -611,10 +645,12 @@
       if (isSuccess) {
         msg.innerHTML = `<span class='ok'>Enrollment verified for ${email}.</span>`;
         otpInput.value = "";
+
+        // ✅ verification completes re-enroll: clear override
+        clearPendingOverride();
       } else {
         const reason = data?.error || data?.reason || "Verification failed.";
         msg.innerHTML = `<span class='err'>${reason}</span>`;
-        console.log("Verify response:", data);
       }
 
       await refreshStatus(user);
@@ -629,14 +665,11 @@
   }
 
   // -----------------------------
-  // Wire up events
+  // Wire up events + Init
   // -----------------------------
   document.getElementById("startEnrollBtn").addEventListener("click", startEnrollment);
   document.getElementById("verifyBtn").addEventListener("click", verifyCode);
 
-  // -----------------------------
-  // Init
-  // -----------------------------
   (async () => {
     const user = await getUserInfo();
     lastKnownUser = user;
