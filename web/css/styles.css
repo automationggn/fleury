@@ -22,7 +22,7 @@
 }
 
 /* =========================================================
-   RESET / BASE (MOBILE FIRST + SAFE AREA)
+   RESET / BASE + SAFE AREA
 ========================================================= */
 * {
   box-sizing: border-box;
@@ -46,13 +46,8 @@ body {
 }
 
 /* =========================================================
-   UTILITIES
+   STATUS PILLS
 ========================================================= */
-.muted {
-  color: var(--text-muted);
-}
-
-/* Status pills */
 .ok,
 .warn,
 .err {
@@ -224,7 +219,7 @@ body {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 16px;
-  padding: 18px 14px;
+  padding: 18px 16px;
   margin-bottom: 16px;
   box-shadow: 0 6px 20px rgba(0,0,0,0.04);
 }
@@ -250,8 +245,8 @@ body {
 ========================================================= */
 .actions {
   display: flex;
-  flex-direction: column;
   gap: 12px;
+  flex-wrap: wrap;
   align-items: flex-start;
 }
 
@@ -260,8 +255,6 @@ body {
 ========================================================= */
 button,
 a.btnLike {
-  width: 100%;
-  max-width: 320px;
   padding: 12px 18px;
   border-radius: 12px;
   border: 1px solid var(--border);
@@ -287,7 +280,6 @@ button:disabled {
 }
 
 .miniBtn {
-  width: auto;
   padding: 8px 14px;
   font-size: 12px;
 }
@@ -296,8 +288,6 @@ button:disabled {
    INPUTS
 ========================================================= */
 input {
-  width: 100%;
-  max-width: 220px;
   padding: 12px 14px;
   border-radius: 12px;
   border: 1px solid var(--border);
@@ -306,7 +296,7 @@ input {
 }
 
 /* =========================================================
-   QR CODE
+   QR
 ========================================================= */
 .qrBlock {
   margin-top: 16px;
@@ -319,7 +309,6 @@ input {
 .qr {
   width: 220px;
   height: 220px;
-  display: block;
   border-radius: 16px;
   border: 1px solid var(--border);
   background: #fff;
@@ -331,9 +320,9 @@ input {
 .statusToolsBar {
   margin-top: 12px;
   display: flex;
-  flex-direction: column;
   gap: 8px;
-  align-items: flex-start;
+  flex-wrap: wrap;
+  align-items: center;
   font-size: 12px;
 }
 
@@ -342,7 +331,7 @@ input {
 }
 
 /* =========================================================
-   TOASTS (SAFE AREA AWARE)
+   TOASTS (SAFE AREA)
 ========================================================= */
 .toastHost {
   position: fixed;
@@ -380,7 +369,6 @@ input {
   border-radius: 10px;
   display: grid;
   place-items: center;
-  flex-shrink: 0;
 }
 
 .toastBody {
@@ -409,7 +397,7 @@ input {
 }
 
 /* =========================================================
-   MODAL (SAFE AREA BOTTOM SHEET)
+   MODAL (SAFE AREA)
 ========================================================= */
 .modalOverlay {
   position: fixed;
@@ -473,7 +461,7 @@ input {
 }
 
 /* =========================================================
-   TABLET & DESKTOP
+   RESPONSIVE
 ========================================================= */
 @media (min-width: 640px) {
   .app {
@@ -490,31 +478,12 @@ input {
     flex-direction: row;
   }
 
-  button,
-  a.btnLike {
-    width: auto;
-  }
-
-  .statusToolsBar {
-    flex-direction: row;
-  }
-
   .modalOverlay {
     align-items: center;
   }
 
   .modalDialog {
-    width: min(520px, 100%);
+    width: 520px;
     border-radius: 16px;
-  }
-}
-
-@media (min-width: 1024px) {
-  .pageTitle {
-    font-size: 28px;
-  }
-
-  .card {
-    padding: 22px;
   }
 }
