@@ -41,23 +41,16 @@
       padding: 0 16px 40px;
     }
 
-    /* Header bar */
+    /* TOP HEADER (ONLY org + profile) */
     .topbar {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 16px;
-      margin-bottom: 14px;
+      margin-bottom: 18px;
     }
 
-    /* NEW: Org name (top-left) */
-    .orgName {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      min-width: 180px;
-    }
-
+    /* Org name badge (top-left) */
     .orgBadge {
       display: inline-flex;
       align-items: center;
@@ -68,9 +61,9 @@
       background: #fff;
       box-shadow: 0 6px 20px rgba(0,0,0,0.04);
       font-size: 13px;
-      font-weight: 600;
+      font-weight: 700;
       white-space: nowrap;
-      max-width: 240px;
+      max-width: 260px;
       overflow: hidden;
       text-overflow: ellipsis;
     }
@@ -81,23 +74,6 @@
       border-radius: 999px;
       background: linear-gradient(135deg, #2563eb, #7c3aed);
       flex: 0 0 auto;
-    }
-
-    /* Center title block */
-    .titleblock {
-      flex: 1;
-      min-width: 240px;
-    }
-
-    .titleblock h1 {
-      margin: 0 0 6px 0;
-      font-size: 28px;
-      letter-spacing: -0.2px;
-    }
-
-    .titleblock p {
-      margin: 0;
-      color: var(--text-muted);
     }
 
     /* Avatar menu */
@@ -129,6 +105,7 @@
       cursor: pointer;
       user-select: none;
       box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+      transition: transform 120ms ease;
     }
 
     .avatarBtn:hover { transform: translateY(-1px); }
@@ -226,6 +203,18 @@
       box-shadow: 0 6px 20px rgba(0,0,0,0.04);
     }
 
+    /* Title card header text */
+    .pageTitle {
+      margin: 0 0 6px 0;
+      font-size: 28px;
+      letter-spacing: -0.2px;
+    }
+
+    .pageSubtitle {
+      margin: 0;
+      color: var(--text-muted);
+    }
+
     .row {
       display: flex;
       gap: 18px;
@@ -303,13 +292,10 @@
     a { color: var(--primary); font-weight: 500; text-decoration: none; }
     a:hover { text-decoration: underline; }
 
-    /* Small-screen: stack header neatly */
     @media (max-width: 640px) {
       .topbar { flex-wrap: wrap; }
-      .orgName { order: 1; }
-      .userMenu { order: 2; margin-left: auto; }
-      .titleblock { order: 3; flex: 1 1 100%; }
-      .titleblock h1 { font-size: 24px; }
+      .userMenu { margin-left: auto; }
+      .pageTitle { font-size: 24px; }
     }
   </style>
 </head>
@@ -317,30 +303,20 @@
 <body>
   <div class="app">
 
-    <!-- TOP BAR: org name left, title center, profile avatar right -->
+    <!-- TOP HEADER: org left, profile right -->
     <div class="topbar">
-      <!-- NEW: Org Name (derived from email) -->
-      <div class="orgName">
-        <div class="orgBadge" title="Organization">
-          <span class="orgDot" aria-hidden="true"></span>
-          <span id="orgNameText">—</span>
-        </div>
-      </div>
-
-      <div class="titleblock">
-        <h1>TOTP Self‑Service Enrollment</h1>
-        <p>Enroll Microsoft Authenticator using self‑registered TOTP codes.</p>
+      <div class="orgBadge" title="Organization">
+        <span class="orgDot" aria-hidden="true"></span>
+        <span id="orgNameText">—</span>
       </div>
 
       <div class="userMenu">
         <span id="authState" class="authPill">Checking…</span>
 
-        <!-- Avatar button -->
         <button id="avatarBtn" class="avatarBtn" aria-label="User menu" title="User menu">
           <div id="avatarCircle" class="avatarCircle">?</div>
         </button>
 
-        <!-- Dropdown -->
         <div id="userDropdown" class="dropdown" role="menu" aria-label="User menu">
           <div class="ddHeader">
             <div class="avatarCircle" id="avatarCircleMini" style="width:34px;height:34px;">?</div>
@@ -370,6 +346,12 @@
           </a>
         </div>
       </div>
+    </div>
+
+    <!-- TITLE CARD (NEW container like sections) -->
+    <div class="card">
+      <h1 class="pageTitle">TOTP Self‑Service Enrollment</h1>
+      <p class="pageSubtitle">Enroll Microsoft Authenticator using self‑registered TOTP codes.</p>
     </div>
 
     <!-- 1. AUTH -->
@@ -464,46 +446,42 @@
       return (a + b).toUpperCase();
     }
 
-    // NEW: org name from email -> text after "@" and before ".com"
+    // Org name: after "@" and before ".com"
     function orgFromEmail(email) {
       if (!email || !email.includes("@")) return "—";
-      const domain = email.split("@")[1] || "";
-      // Take only what is before ".com" (per requirement)
-      const beforeCom = domain.split(".com")[0] || domain;
-      // Clean up in case domain contains additional suffixes
-      return (beforeCom || "—").toLowerCase();
+      const domain = (email.split("@")[1] || "").toLowerCase();
+      const beforeCom = domain.split(".com")[0];
+      return beforeCom || "—";
     }
 
     function setAuthUI(user) {
       const isAuthed = !!user;
-
       const email = user?.userDetails || "";
 
-      // NEW: org name badge
+      // Org name
       document.getElementById("orgNameText").textContent = isAuthed ? orgFromEmail(email) : "—";
 
-      // top pill + dropdown email
+      // Auth pill + dropdown email
       document.getElementById("authState").textContent = isAuthed ? "Authenticated" : "Anonymous";
       document.getElementById("ddEmail").textContent = isAuthed ? email : "Not signed in";
 
-      // avatar initials
+      // Avatar initials
       const ini = isAuthed ? initialsFromEmail(email) : "?";
       document.getElementById("avatarCircle").textContent = ini;
       document.getElementById("avatarCircleMini").textContent = ini;
 
-      // inline card fields
+      // Inline card fields
       document.getElementById("userLine").textContent = isAuthed ? email : "—";
       document.getElementById("rolesLine").textContent = isAuthed ? (user.userRoles || []).join(", ") : "—";
 
-      // links visibility (dropdown)
+      // Links visibility (dropdown)
       document.getElementById("loginLink").style.display = isAuthed ? "none" : "flex";
       document.getElementById("logoutLink").style.display = isAuthed ? "flex" : "none";
+      document.getElementById("msProfileLink").style.display = isAuthed ? "flex" : "none";
 
-      // links visibility (inline card)
+      // Links visibility (inline)
       document.getElementById("loginLinkInline").style.display = isAuthed ? "none" : "inline";
       document.getElementById("logoutLinkInline").style.display = isAuthed ? "inline" : "none";
-
-      document.getElementById("msProfileLink").style.display = isAuthed ? "flex" : "none";
     }
 
     // Dropdown behavior
@@ -523,7 +501,6 @@
       if (e.key === "Escape") closeDropdown();
     });
 
-    // Existing enrollment + verify functions (unchanged behavior)
     async function startEnrollment() {
       const msg = document.getElementById("startEnrollMsg");
       const qrBlock = document.getElementById("qrBlock");
