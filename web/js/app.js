@@ -504,8 +504,21 @@ if (ddEmailEl) {
       qrImg.src = qrUrl(data.otpauth);
       qrBlock.classList.remove("is-hidden");
 
+      // ✅ Front-end: treat re-enroll as "pending" immediately
+      lastKnownStatus = "pending";
+      setStatusUI({
+        state: "pending",
+        issuer: data.issuer || "FleuryTOTP",
+        enrolledAt: null
+      });
+      updateFlowSteps(true, lastKnownStatus);
+      setButtonsState({ user: lastKnownUser, status: lastKnownStatus });
+
       showToast("success", "QR generated", "Scan in Authenticator, then verify with OTP.", 5200);
-      await refreshStatus(user);
+
+      // ❌ Remove this line so backend "enrolled" does not override our pending state
+      // await refreshStatus(user);
+
     } catch (e) {
       console.error(e);
       showToast("error", "Enroll error", "Failed to start enrollment (network/error).", 6000);
