@@ -829,3 +829,8 @@ button.miniBtn {
   font-size: 14px;
   line-height: 1;
 }
+
+/* Hide the Sign in step from UI but keep it in the DOM for JS logic */
+.hidden-step {
+  display: none;
+}
