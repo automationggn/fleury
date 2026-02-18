@@ -600,8 +600,43 @@ if (ddEmailEl) {
     cleanupBrokenTopCards();
     initFlow();
 
-    document.getElementById("startEnrollBtn").addEventListener("click", startEnrollment);
-    document.getElementById("verifyBtn").addEventListener("click", verifyCode);
+    const startBtn = document.getElementById("startEnrollBtn");
+    const verifyBtn = document.getElementById("verifyBtn");
+    const otpInput = document.getElementById("otpInput");
+
+    if (startBtn) {
+      startBtn.addEventListener("click", startEnrollment);
+    }
+
+    if (verifyBtn) {
+      verifyBtn.addEventListener("click", verifyCode);
+
+      // ✅ Tooltip on hover when OTP is incomplete
+      const updateVerifyTooltip = () => {
+        if (!otpInput) return;
+
+        const value = (otpInput.value || "").trim();
+        const hasSixDigits = /^\d{6}$/.test(value);
+
+        if (!hasSixDigits) {
+          verifyBtn.title = "Enter a valid 6-digit OTP.";
+          // Optional: also expose to screen readers
+          verifyBtn.setAttribute("aria-label", "Verify OTP – enter a valid 6-digit OTP first.");
+        } else {
+          verifyBtn.title = "";
+          verifyBtn.removeAttribute("aria-label");
+        }
+      };
+
+      // Update tooltip on hover
+      verifyBtn.addEventListener("mouseenter", updateVerifyTooltip);
+
+      // Keep tooltip in sync as user types
+      if (otpInput) {
+        otpInput.addEventListener("input", updateVerifyTooltip);
+      }
+    }
+
 
     const refreshBtn = document.getElementById("refreshStatusBtn");
     if (refreshBtn) {
